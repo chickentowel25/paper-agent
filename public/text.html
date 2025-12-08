@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Agent - 텍스트 대화</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container text-container">
+        <header>
+            <h1>텍스트 대화 모드</h1>
+            <div class="timer" id="timer">05:00</div>
+        </header>
+
+        <main>
+            <div class="chat-area" id="chatArea">
+                <div class="message assistant">
+                    <div class="message-content">대화를 초기화하는 중...</div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="메시지를 입력하세요..."
+                    autocomplete="off"
+                >
+                <button id="sendBtn">전송</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let timerInterval = null;
+        let timeLeft = 300; // 5분 = 300초
+
+        // 타이머 업데이트
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                endSession();
+            } else {
+                timeLeft--;
+            }
+        }
+
+        // 세션 초기화
+        async function initializeSession() {
+            const paperFilename = localStorage.getItem('selectedPaper');
+            if (!paperFilename) {
+                alert('논문이 선택되지 않았습니다. 홈으로 돌아갑니다.');
+                window.location.href = '/home.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/conversation/initialize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        paperFilename: paperFilename,
+                        mode: 'text'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    sessionId = data.sessionId;
+                    addMessage('assistant', data.initialMessage);
+                    
+                    // 타이머 시작
+                    timerInterval = setInterval(updateTimer, 1000);
+                    
+                    // 입력창 포커스
+                    document.getElementById('messageInput').focus();
+                } else {
+                    alert('세션 초기화 실패: ' + data.error);
+                }
+            } catch (error) {
+                console.error('세션 초기화 오류:', error);
+                alert('서버 연결 오류가 발생했습니다.');
+            }
+        }
+
+        // 메시지 전송
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (!message || !sessionId) return;
+
+            input.value = '';
+            addMessage('user', message);
+
+            try {
+                const response = await fetch('/api/conversation/text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addMessage('assistant', data.response);
+                } else {
+                    alert('응답 생성 실패: ' + data.error);
+                }
+            } catch (error) {
+                console.error('메시지 전송 오류:', error);
+                alert('서버 오류가 발생했습니다.');
+            }
+
+            input.focus();
+        }
+
+        // 메시지 추가
+        function addMessage(role, content) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // 세션 종료
+        async function endSession() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            if (sessionId) {
+                try {
+                    await fetch('/api/conversation/end', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: sessionId })
+                    });
+                } catch (error) {
+                    console.error('세션 종료 오류:', error);
+                }
+            }
+
+            alert('5분 시간이 종료되었습니다. 대화 로그가 저장되었습니다.');
+            window.location.href = '/home.html';
+        }
+
+        // 이벤트 리스너
+        document.getElementById('sendBtn').addEventListener('click', sendMessage);
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // 페이지 로드 시 세션 초기화
+        initializeSession();
+    </script>
+</body>
+</html>

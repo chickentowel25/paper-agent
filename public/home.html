@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Agent - 논문 선택</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container home-container">
+        <header>
+            <h1>Paper Agent</h1>
+            <p class="subtitle">HCI 논문을 빠르게 이해하기 위한 AI 에이전트</p>
+        </header>
+
+        <main>
+            <section class="paper-selection">
+                <h2>논문 선택</h2>
+                <div class="paper-list" id="paperList">
+                    <div class="loading">논문 목록을 불러오는 중...</div>
+                </div>
+            </section>
+
+            <section class="mode-selection">
+                <h2>상호작용 모드 선택</h2>
+                <div class="mode-buttons">
+                    <button class="mode-btn" data-mode="text">
+                        <span class="mode-icon">💬</span>
+                        <span class="mode-label">Text</span>
+                        <span class="mode-desc">텍스트로 대화</span>
+                    </button>
+                    <button class="mode-btn" data-mode="talk">
+                        <span class="mode-icon">🎤</span>
+                        <span class="mode-label">Talk</span>
+                        <span class="mode-desc">음성으로 대화</span>
+                    </button>
+                </div>
+            </section>
+
+            <button class="start-btn" id="startBtn" disabled>
+                시작하기
+            </button>
+        </main>
+    </div>
+
+    <script>
+        let selectedPaper = null;
+        let selectedMode = null;
+
+        // 논문 목록 가져오기
+        async function loadPapers() {
+            try {
+                const response = await fetch('/api/papers');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const paperList = document.getElementById('paperList');
+                    paperList.innerHTML = '';
+                    
+                    data.papers.forEach(paper => {
+                        const paperItem = document.createElement('div');
+                        paperItem.className = 'paper-item';
+                        paperItem.dataset.filename = paper.filename;
+                        paperItem.innerHTML = `
+                            <div class="paper-title">${paper.title}</div>
+                        `;
+                        paperItem.addEventListener('click', () => {
+                            document.querySelectorAll('.paper-item').forEach(item => {
+                                item.classList.remove('selected');
+                            });
+                            paperItem.classList.add('selected');
+                            selectedPaper = paper.filename;
+                            checkReady();
+                        });
+                        paperList.appendChild(paperItem);
+                    });
+                } else {
+                    document.getElementById('paperList').innerHTML = 
+                        '<div class="error">논문 목록을 불러올 수 없습니다.</div>';
+                }
+            } catch (error) {
+                console.error('논문 목록 로드 오류:', error);
+                document.getElementById('paperList').innerHTML = 
+                    '<div class="error">서버 연결 오류가 발생했습니다.</div>';
+            }
+        }
+
+        // 모드 선택
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.mode-btn').forEach(b => {
+                    b.classList.remove('selected');
+                });
+                btn.classList.add('selected');
+                selectedMode = btn.dataset.mode;
+                checkReady();
+            });
+        });
+
+        // 시작 가능 여부 확인
+        function checkReady() {
+            const startBtn = document.getElementById('startBtn');
+            if (selectedPaper && selectedMode) {
+                startBtn.disabled = false;
+            } else {
+                startBtn.disabled = true;
+            }
+        }
+
+        // 시작 버튼 클릭
+        document.getElementById('startBtn').addEventListener('click', async () => {
+            if (!selectedPaper || !selectedMode) return;
+
+            // 로컬 스토리지에 저장
+            localStorage.setItem('selectedPaper', selectedPaper);
+            localStorage.setItem('selectedMode', selectedMode);
+
+            // 해당 모드 페이지로 이동
+            if (selectedMode === 'talk') {
+                window.location.href = '/talk.html';
+            } else {
+                window.location.href = '/text.html';
+            }
+        });
+
+        // 페이지 로드 시 논문 목록 가져오기
+        loadPapers();
+    </script>
+</body>
+</html>

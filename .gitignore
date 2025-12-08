@@ -1,0 +1,11 @@
+node_modules/
+.env
+*.log
+logs/*.json
+.DS_Store
+.vscode/
+.idea/
+
+# Google Cloud 키 파일
+modules/google-cloud-key.json
+google-cloud-key.json

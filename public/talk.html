@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Agent - 음성 대화</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container talk-container">
+        <header>
+            <h1>음성 대화 모드</h1>
+            <div class="timer" id="timer">05:00</div>
+        </header>
+
+        <main>
+            <div class="chat-area" id="chatArea">
+                <div class="message assistant">
+                    <div class="message-content">대화를 초기화하는 중...</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="mic-btn" id="micBtn">
+                    <span class="mic-icon">🎤</span>
+                    <span class="mic-label">마이크 버튼을 누르고 말하세요</span>
+                </button>
+                <div class="status" id="status">준비됨</div>
+            </div>
+        </main>
+    </div>
+
+    <script src="STT.js"></script>
+    <script>
+        let sessionId = null;
+        let timerInterval = null;
+        let timeLeft = 300; // 5분 = 300초
+        let sttInstance = null;
+        let isRecording = false;
+
+        // 타이머 업데이트
+        function updateTimer() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            document.getElementById('timer').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                endSession();
+            } else {
+                timeLeft--;
+            }
+        }
+
+        // 세션 초기화
+        async function initializeSession() {
+            const paperFilename = localStorage.getItem('selectedPaper');
+            if (!paperFilename) {
+                alert('논문이 선택되지 않았습니다. 홈으로 돌아갑니다.');
+                window.location.href = '/home.html';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/conversation/initialize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        paperFilename: paperFilename,
+                        mode: 'talk'
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    sessionId = data.sessionId;
+                    addMessage('assistant', data.initialMessage);
+                    
+                    // TTS 재생
+                    if (data.audioBase64) {
+                        playAudio(data.audioBase64);
+                    }
+
+                    // 타이머 시작
+                    timerInterval = setInterval(updateTimer, 1000);
+                    
+                    // STT 초기화
+                    initializeSTT();
+                } else {
+                    alert('세션 초기화 실패: ' + data.error);
+                }
+            } catch (error) {
+                console.error('세션 초기화 오류:', error);
+                alert('서버 연결 오류가 발생했습니다.');
+            }
+        }
+
+        // STT 초기화
+        function initializeSTT() {
+            if (!window.WebSpeechSTT) {
+                alert('Web Speech API를 지원하지 않는 브라우저입니다. Chrome 또는 Edge를 사용해주세요.');
+                return;
+            }
+
+            sttInstance = window.WebSpeechSTT.initialize({
+                lang: 'ko-KR',
+                onResult: (transcript, isFinal, confidence) => {
+                    if (isFinal && transcript) {
+                        updateStatus('인식 완료: ' + transcript);
+                        sendMessage(transcript);
+                    }
+                },
+                onError: (error) => {
+                    console.error('STT 오류:', error);
+                    updateStatus('음성 인식 오류');
+                },
+                onStart: () => {
+                    updateStatus('음성 인식 중...');
+                    isRecording = true;
+                },
+                onEnd: (finalTranscript) => {
+                    updateStatus('음성 인식 종료');
+                    isRecording = false;
+                }
+            });
+        }
+
+        // 마이크 버튼 이벤트
+        const micBtn = document.getElementById('micBtn');
+        
+        micBtn.addEventListener('mousedown', () => {
+            if (sttInstance && !isRecording) {
+                sttInstance.start();
+                micBtn.classList.add('active');
+            }
+        });
+
+        micBtn.addEventListener('mouseup', () => {
+            if (sttInstance && isRecording) {
+                sttInstance.stop();
+                micBtn.classList.remove('active');
+            }
+        });
+
+        micBtn.addEventListener('mouseleave', () => {
+            if (sttInstance && isRecording) {
+                sttInstance.stop();
+                micBtn.classList.remove('active');
+            }
+        });
+
+        // 터치 이벤트
+        micBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (sttInstance && !isRecording) {
+                sttInstance.start();
+                micBtn.classList.add('active');
+            }
+        });
+
+        micBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            if (sttInstance && isRecording) {
+                sttInstance.stop();
+                micBtn.classList.remove('active');
+            }
+        });
+
+        // 메시지 전송
+        async function sendMessage(transcript) {
+            if (!sessionId || !transcript) return;
+
+            addMessage('user', transcript);
+            updateStatus('AI 응답 대기 중...');
+
+            try {
+                const response = await fetch('/api/conversation/talk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: sessionId,
+                        transcript: transcript
+                    })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    addMessage('assistant', data.response);
+                    
+                    // TTS 재생
+                    if (data.audioBase64) {
+                        playAudio(data.audioBase64);
+                    }
+                    
+                    updateStatus('준비됨');
+                } else {
+                    alert('응답 생성 실패: ' + data.error);
+                    updateStatus('오류 발생');
+                }
+            } catch (error) {
+                console.error('메시지 전송 오류:', error);
+                updateStatus('서버 오류');
+            }
+        }
+
+        // 메시지 추가
+        function addMessage(role, content) {
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            chatArea.appendChild(messageDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // 오디오 재생
+        function playAudio(base64Audio) {
+            const audio = new Audio('data:audio/mp3;base64,' + base64Audio);
+            audio.play().catch(error => {
+                console.error('오디오 재생 오류:', error);
+            });
+        }
+
+        // 상태 업데이트
+        function updateStatus(text) {
+            document.getElementById('status').textContent = text;
+        }
+
+        // 세션 종료
+        async function endSession() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            if (sttInstance && isRecording) {
+                sttInstance.stop();
+            }
+
+            if (sessionId) {
+                try {
+                    await fetch('/api/conversation/end', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId: sessionId })
+                    });
+                } catch (error) {
+                    console.error('세션 종료 오류:', error);
+                }
+            }
+
+            alert('5분 시간이 종료되었습니다. 대화 로그가 저장되었습니다.');
+            window.location.href = '/home.html';
+        }
+
+        // 페이지 로드 시 세션 초기화
+        initializeSession();
+    </script>
+</body>
+</html>
