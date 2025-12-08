@@ -20,7 +20,7 @@ import androidx.core.content.ContextCompat;
 public class MainActivity extends AppCompatActivity {
     private static final int PERMISSION_REQUEST_CODE = 100;
     private WebView webView;
-    private static final String SERVER_URL = "http://169.254.158.38:3000";
+    private static final String SERVER_URL = "http://192.168.0.20:3000";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

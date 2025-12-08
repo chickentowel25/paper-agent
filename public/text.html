@@ -14,28 +14,26 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="container text-container">
-        <header>
-            <div class="timer" id="timer">05:00</div>
-        </header>
+<body class="text-page">
+    <header>
+        <div class="timer" id="timer">05:00</div>
+    </header>
 
-        <main>
-            <div class="chat-area" id="chatArea">
-                <!-- 사용자가 먼저 질문을 시작합니다 -->
-            </div>
+    <main>
+        <div class="chat-area" id="chatArea">
+            <!-- 사용자가 먼저 질문을 시작합니다 -->
+        </div>
 
-            <div class="input-area">
-                <input 
-                    type="text" 
-                    id="messageInput" 
-                    placeholder="메시지를 입력하세요..."
-                    autocomplete="off"
-                >
-                <button id="sendBtn">전송</button>
-            </div>
-        </main>
-    </div>
+        <div class="input-area">
+            <input 
+                type="text" 
+                id="messageInput" 
+                placeholder="메시지를 입력하세요..."
+                autocomplete="off"
+            >
+            <button id="sendBtn">전송</button>
+        </div>
+    </main>
 
     <script>
         let sessionId = null;
@@ -159,12 +157,155 @@
             window.location.href = '/home.html';
         }
 
+        // Visual Viewport API로 키보드 높이 변화 감지 및 입력창 위치 조정
+        let keyboardHeight = 0;
+        
+        function handleViewportResize() {
+            if (window.visualViewport) {
+                const viewport = window.visualViewport;
+                const body = document.body;
+                const header = document.querySelector('header');
+                const inputArea = document.querySelector('.input-area');
+                const chatArea = document.querySelector('.chat-area');
+                
+                // visualViewport의 높이를 body 높이로 설정
+                body.style.height = `${viewport.height}px`;
+                body.style.position = 'fixed';
+                body.style.width = '100%';
+                body.style.top = '0';
+                body.style.left = '0';
+                body.style.overflow = 'hidden';
+                
+                // 키보드가 올라온 경우 입력창 위치 조정
+                const windowHeight = window.innerHeight;
+                const viewportHeight = viewport.height;
+                keyboardHeight = windowHeight - viewportHeight;
+                
+                // 헤더를 항상 상단에 고정
+                if (header) {
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.left = '0';
+                    header.style.right = '0';
+                    header.style.width = '100%';
+                    header.style.zIndex = '100';
+                }
+                
+                if (keyboardHeight > 0) {
+                    // 키보드가 올라온 경우: 입력창을 키보드 위에 위치
+                    inputArea.style.bottom = `${keyboardHeight}px`;
+                    inputArea.style.position = 'fixed';
+                    inputArea.style.left = '0';
+                    inputArea.style.right = '0';
+                    inputArea.style.width = '100%';
+                    inputArea.style.zIndex = '1000';
+                } else {
+                    // 키보드가 내려간 경우: 원래 위치로
+                    inputArea.style.bottom = '0';
+                    inputArea.style.position = 'fixed';
+                    inputArea.style.left = '0';
+                    inputArea.style.right = '0';
+                    inputArea.style.width = '100%';
+                    inputArea.style.zIndex = '1000';
+                }
+                
+                // chat-area의 높이 조정 (헤더와 입력창 높이 제외)
+                if (chatArea) {
+                    const headerHeight = header ? header.offsetHeight : 0;
+                    const inputAreaHeight = inputArea ? inputArea.offsetHeight : 0;
+                    const availableHeight = viewportHeight - headerHeight - inputAreaHeight;
+                    chatArea.style.height = `${availableHeight}px`;
+                    chatArea.style.marginTop = `${headerHeight}px`;
+                    chatArea.style.paddingBottom = `${inputAreaHeight}px`;
+                }
+            }
+        }
+
+        // Visual Viewport 이벤트 리스너
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', handleViewportResize);
+            // scroll 이벤트는 제거 - 헤더와 입력창은 고정, chat-area만 스크롤
+        } else {
+            // visualViewport를 지원하지 않는 경우 대체 방법
+            let initialHeight = window.innerHeight;
+            const inputArea = document.querySelector('.input-area');
+            
+            window.addEventListener('resize', () => {
+                const currentHeight = window.innerHeight;
+                if (currentHeight < initialHeight) {
+                    // 키보드가 올라온 경우
+                    const keyboardHeight = initialHeight - currentHeight;
+                    document.body.style.height = `${currentHeight}px`;
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    
+                    // 입력창을 키보드 위에 위치
+                    inputArea.style.bottom = `${keyboardHeight}px`;
+                    inputArea.style.position = 'fixed';
+                } else {
+                    // 키보드가 내려간 경우
+                    document.body.style.height = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    
+                    // 입력창 원래 위치로
+                    inputArea.style.bottom = '0';
+                    inputArea.style.position = 'sticky';
+                }
+            });
+        }
+
+        // 초기 높이 설정
+        if (window.visualViewport) {
+            handleViewportResize();
+        }
+
+        // 페이지 전체 스크롤 방지 (chat-area 제외)
+        function preventBodyScroll(e) {
+            const chatArea = document.querySelector('.chat-area');
+            const target = e.target;
+            
+            // chat-area 내부가 아니면 스크롤 방지
+            if (!chatArea || !chatArea.contains(target)) {
+                e.preventDefault();
+            }
+        }
+
+        // 터치 스크롤 방지
+        document.addEventListener('touchmove', preventBodyScroll, { passive: false });
+        document.addEventListener('wheel', preventBodyScroll, { passive: false });
+        
+        // chat-area는 스크롤 허용
+        const chatArea = document.querySelector('.chat-area');
+        if (chatArea) {
+            chatArea.addEventListener('touchmove', (e) => {
+                // chat-area 내부 스크롤은 허용
+                e.stopPropagation();
+            }, { passive: true });
+        }
+
         // 이벤트 리스너
         document.getElementById('sendBtn').addEventListener('click', sendMessage);
         document.getElementById('messageInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessage();
             }
+        });
+
+        // 입력창 포커스/블러 이벤트로 추가 조정
+        const messageInput = document.getElementById('messageInput');
+        messageInput.addEventListener('focus', () => {
+            // 포커스 시 약간의 지연 후 조정 (키보드 애니메이션 대기)
+            setTimeout(() => {
+                handleViewportResize();
+            }, 300);
+        });
+        
+        messageInput.addEventListener('blur', () => {
+            // 포커스 해제 시 약간의 지연 후 조정 (키보드 애니메이션 대기)
+            setTimeout(() => {
+                handleViewportResize();
+            }, 300);
         });
 
         // 페이지 로드 시 세션 초기화
