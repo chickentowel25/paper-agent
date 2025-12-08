@@ -5,12 +5,7 @@
   box-sizing: border-box;
 }
 
-html {
-  overflow: hidden;
-  height: 100%;
-  position: fixed;
-  width: 100%;
-}
+/* html은 기본적으로 스크롤 가능 */
 
 body {
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI",
@@ -21,6 +16,10 @@ body {
   background: #ffffff;
   min-height: 100vh;
   color: #000000;
+}
+
+/* text 페이지에서만 스크롤 방지 */
+body.text-page {
   overflow: hidden;
   height: 100%;
   position: fixed;
@@ -40,7 +39,7 @@ body {
 
 /* 홈 페이지 스타일 */
 .home-container {
-  justify-content: center;
+  justify-content: top;
   align-items: center;
 }
 
@@ -50,7 +49,7 @@ header {
 }
 
 header h1 {
-  font-size: 115.2px;
+  font-size: 172.8px;
   font-weight: 700;
   color: #000000;
   margin-bottom: 32px;
@@ -58,7 +57,7 @@ header h1 {
 }
 
 .subtitle {
-  font-size: 51.2px;
+  font-size: 76.8px;
   color: #333333;
 }
 
@@ -87,7 +86,7 @@ section h2 {
 
 /* 홈 페이지에서만 제목 크기 절반 */
 .home-container section h2 {
-  font-size: 32px;
+  font-size: 48px;
   margin-bottom: 32px;
 }
 
@@ -137,7 +136,7 @@ section h2 {
 
 /* 홈 페이지에서만 논문 제목 크기 절반 */
 .home-container .paper-title {
-  font-size: 22.4px;
+  font-size: 33.6px;
 }
 
 /* 모드 선택 */
@@ -195,15 +194,15 @@ section h2 {
 
 /* 홈 페이지에서만 아이콘 크기 절반으로 줄이기 */
 .home-container .mode-icon {
-  width: 50px;
-  height: 50px;
+  width: 60px;
+  height: 60px;
 }
 
 /* text 아이콘만 더 작게, margin으로 전체 크기는 talk와 같게 */
 .home-container .mode-btn[data-mode="text"] .mode-icon {
-  width: 40px;
-  height: 40px;
-  margin: 5px;
+  width: 48px;
+  height: 48px;
+  margin: 6px;
 }
 
 .mode-label {
@@ -213,7 +212,7 @@ section h2 {
 
 /* 홈 페이지에서만 모드 라벨 크기 절반 */
 .home-container .mode-label {
-  font-size: 22.4px;
+  font-size: 33.6px;
 }
 
 .mode-desc {
@@ -238,8 +237,8 @@ section h2 {
 
 /* 홈 페이지에서만 시작 버튼 크기 절반 */
 .home-container .start-btn {
-  padding: 24px 80px;
-  font-size: 28.8px;
+  padding: 36px 120px;
+  font-size: 43.2px;
 }
 
 .start-btn:hover:not(:disabled) {

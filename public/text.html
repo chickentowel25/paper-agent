@@ -314,6 +314,12 @@
             }
         }
 
+        // html과 body 스크롤 방지 (text 페이지에서만)
+        document.documentElement.style.overflow = 'hidden';
+        document.documentElement.style.height = '100%';
+        document.documentElement.style.position = 'fixed';
+        document.documentElement.style.width = '100%';
+
         // 터치 스크롤 방지
         document.addEventListener('touchmove', preventBodyScroll, { passive: false });
         document.addEventListener('wheel', preventBodyScroll, { passive: false });
