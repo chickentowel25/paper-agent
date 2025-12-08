@@ -3,7 +3,7 @@
   "appName": "Paper Agent",
   "webDir": "public",
   "server": {
-    "url": "http://192.168.0.20:3000",
+    "url": "http://169.254.158.38:3000",
     "cleartext": true
   },
   "android": {

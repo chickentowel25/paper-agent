@@ -1,0 +1,3 @@
+com.paperagent.app.test
+style WhiteBackgroundDialogTheme
+style WhiteBackgroundTheme
