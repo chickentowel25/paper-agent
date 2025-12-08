@@ -5,9 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "cap:sync": "npx cap sync",
-    "cap:open": "npx cap open android"
+    "dev": "nodemon server.js"
   },
   "keywords": [
     "hci",
@@ -19,9 +17,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@capacitor/android": "^7.4.4",
-    "@capacitor/cli": "^7.4.4",
-    "@capacitor/core": "^7.4.4",
     "@google-cloud/speech": "^6.0.0",
     "@google-cloud/text-to-speech": "^5.0.0",
     "cheerio": "^1.0.0-rc.12",
