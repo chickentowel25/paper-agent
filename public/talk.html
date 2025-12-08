@@ -31,6 +31,7 @@
         let timeLeft = 300; // 5분 = 300초
         let sttInstance = null;
         let isRecording = false;
+        let currentAudio = null; // 현재 재생 중인 오디오 객체
 
         // 타이머 업데이트
         function updateTimer() {
@@ -109,10 +110,22 @@
             });
         }
 
+        // 현재 재생 중인 오디오 중지
+        function stopCurrentAudio() {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+            }
+        }
+
         // 마이크 버튼 이벤트
         const micBtn = document.getElementById('micBtn');
         
         micBtn.addEventListener('mousedown', () => {
+            // 에이전트 발화 중지
+            stopCurrentAudio();
+            
             if (sttInstance && !isRecording) {
                 sttInstance.start();
                 micBtn.classList.add('active');
@@ -136,6 +149,9 @@
         // 터치 이벤트
         micBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
+            // 에이전트 발화 중지
+            stopCurrentAudio();
+            
             if (sttInstance && !isRecording) {
                 sttInstance.start();
                 micBtn.classList.add('active');
@@ -181,9 +197,25 @@
 
         // 오디오 재생
         function playAudio(base64Audio) {
+            // 기존 오디오가 재생 중이면 중지
+            stopCurrentAudio();
+            
             const audio = new Audio('data:audio/mp3;base64,' + base64Audio);
+            currentAudio = audio;
+            
+            // 오디오 재생 완료 시 변수 초기화
+            audio.addEventListener('ended', () => {
+                currentAudio = null;
+            });
+            
+            // 오디오 재생 중 오류 발생 시 변수 초기화
+            audio.addEventListener('error', () => {
+                currentAudio = null;
+            });
+            
             audio.play().catch(error => {
                 console.error('오디오 재생 오류:', error);
+                currentAudio = null;
             });
         }
 
@@ -196,6 +228,9 @@
             if (sttInstance && isRecording) {
                 sttInstance.stop();
             }
+
+            // 재생 중인 오디오 중지
+            stopCurrentAudio();
 
             if (sessionId) {
                 try {
