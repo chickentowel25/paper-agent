@@ -324,13 +324,11 @@ body.text-page > header h1 {
 
 /* 채팅 영역 */
 .chat-area {
-  flex: 1;
   overflow-y: auto;
   padding: clamp(40px, 6vw, 60px) clamp(20px, 3vw, 40px) clamp(20px, 3vw, 40px) clamp(20px, 3vw, 40px);
   background: #fafafa;
-  min-height: 0;
-  margin-top: 0;
   -webkit-overflow-scrolling: touch;
+  /* 높이와 위치는 JavaScript에서 동적으로 설정 */
 }
 
 .message {

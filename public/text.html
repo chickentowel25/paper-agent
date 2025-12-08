@@ -132,7 +132,11 @@
             messageDiv.className = `message ${role}`;
             messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
             chatArea.appendChild(messageDiv);
-            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            // 마지막 말풍선이 입력창 바로 위까지 스크롤
+            setTimeout(() => {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 10);
         }
 
         // 세션 종료
@@ -209,14 +213,22 @@
                     inputArea.style.zIndex = '1000';
                 }
                 
-                // chat-area의 높이 조정 (헤더와 입력창 높이 제외)
+                // chat-area의 높이 조정 (헤더와 입력창 사이에 끼워넣기)
                 if (chatArea) {
                     const headerHeight = header ? header.offsetHeight : 0;
                     const inputAreaHeight = inputArea ? inputArea.offsetHeight : 0;
+                    
+                    // 키보드가 올라온 경우와 내려간 경우 모두 동일하게 계산
+                    // viewport 높이에서 header와 inputArea 높이를 빼면 chat-area 높이
                     const availableHeight = viewportHeight - headerHeight - inputAreaHeight;
+                    
                     chatArea.style.height = `${availableHeight}px`;
-                    chatArea.style.marginTop = `${headerHeight}px`;
-                    chatArea.style.paddingBottom = `${inputAreaHeight}px`;
+                    chatArea.style.position = 'fixed';
+                    chatArea.style.top = `${headerHeight}px`;
+                    chatArea.style.left = '0';
+                    chatArea.style.right = '0';
+                    chatArea.style.width = '100%';
+                    chatArea.style.bottom = 'auto';
                 }
             }
         }
@@ -228,31 +240,62 @@
         } else {
             // visualViewport를 지원하지 않는 경우 대체 방법
             let initialHeight = window.innerHeight;
+            const header = document.querySelector('header');
             const inputArea = document.querySelector('.input-area');
+            const chatArea = document.querySelector('.chat-area');
             
-            window.addEventListener('resize', () => {
+            function updateLayout() {
                 const currentHeight = window.innerHeight;
-                if (currentHeight < initialHeight) {
-                    // 키보드가 올라온 경우
-                    const keyboardHeight = initialHeight - currentHeight;
-                    document.body.style.height = `${currentHeight}px`;
-                    document.body.style.position = 'fixed';
-                    document.body.style.width = '100%';
-                    
-                    // 입력창을 키보드 위에 위치
+                const keyboardHeight = initialHeight - currentHeight;
+                
+                document.body.style.height = `${currentHeight}px`;
+                document.body.style.position = 'fixed';
+                document.body.style.width = '100%';
+                document.body.style.top = '0';
+                document.body.style.left = '0';
+                document.body.style.overflow = 'hidden';
+                
+                // 헤더는 항상 상단 고정 (로직 변경 없음)
+                if (header) {
+                    header.style.position = 'fixed';
+                    header.style.top = '0';
+                    header.style.left = '0';
+                    header.style.right = '0';
+                    header.style.width = '100%';
+                    header.style.zIndex = '100';
+                }
+                
+                // 입력창 위치 조정 (로직 변경 없음)
+                if (keyboardHeight > 0) {
                     inputArea.style.bottom = `${keyboardHeight}px`;
                     inputArea.style.position = 'fixed';
                 } else {
-                    // 키보드가 내려간 경우
-                    document.body.style.height = '';
-                    document.body.style.position = '';
-                    document.body.style.width = '';
-                    
-                    // 입력창 원래 위치로
                     inputArea.style.bottom = '0';
-                    inputArea.style.position = 'sticky';
+                    inputArea.style.position = 'fixed';
                 }
-            });
+                inputArea.style.left = '0';
+                inputArea.style.right = '0';
+                inputArea.style.width = '100%';
+                inputArea.style.zIndex = '1000';
+                
+                // chat-area만 높이 조정 (header와 입력창 사이에 끼워넣기)
+                if (chatArea) {
+                    const headerHeight = header ? header.offsetHeight : 0;
+                    const inputAreaHeight = inputArea ? inputArea.offsetHeight : 0;
+                    const availableHeight = currentHeight - headerHeight - inputAreaHeight;
+                    
+                    chatArea.style.height = `${availableHeight}px`;
+                    chatArea.style.position = 'fixed';
+                    chatArea.style.top = `${headerHeight}px`;
+                    chatArea.style.left = '0';
+                    chatArea.style.right = '0';
+                    chatArea.style.width = '100%';
+                    chatArea.style.bottom = 'auto';
+                }
+            }
+            
+            window.addEventListener('resize', updateLayout);
+            updateLayout(); // 초기 설정
         }
 
         // 초기 높이 설정
@@ -275,13 +318,31 @@
         document.addEventListener('touchmove', preventBodyScroll, { passive: false });
         document.addEventListener('wheel', preventBodyScroll, { passive: false });
         
-        // chat-area는 스크롤 허용
+        // chat-area는 스크롤 허용하되, 위로 스크롤 제한
         const chatArea = document.querySelector('.chat-area');
         if (chatArea) {
+            // 위로 스크롤 방지 (기본 상태 이상으로)
+            let initialScrollTop = 0;
+            
+            chatArea.addEventListener('scroll', () => {
+                // 스크롤이 초기 위치(0) 이상으로 올라가는 것을 방지
+                if (chatArea.scrollTop < 0) {
+                    chatArea.scrollTop = 0;
+                }
+            });
+            
             chatArea.addEventListener('touchmove', (e) => {
                 // chat-area 내부 스크롤은 허용
                 e.stopPropagation();
             }, { passive: true });
+            
+            // 휠 이벤트로 위로 스크롤 방지
+            chatArea.addEventListener('wheel', (e) => {
+                if (chatArea.scrollTop <= 0 && e.deltaY < 0) {
+                    // 맨 위에 있고 위로 스크롤하려고 하면 방지
+                    e.preventDefault();
+                }
+            }, { passive: false });
         }
 
         // 이벤트 리스너
