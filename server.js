@@ -75,34 +75,20 @@ app.post('/api/conversation/initialize', async (req, res) => {
         // 세션 ID 생성
         const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // AI 초기 응답 생성
-        const initialResponse = await openAIService.initializeConversation(paperContent, mode);
-
-        // 세션 저장
+        // 세션 저장 (사용자가 먼저 시작하므로 빈 대화 히스토리로 시작)
         sessions.set(sessionId, {
             paperFilename,
             paperContent,
             mode,
-            conversationHistory: [
-                {
-                    role: 'assistant',
-                    content: initialResponse
-                }
-            ],
+            conversationHistory: [],
             startTime: Date.now()
         });
-
-        // TTS 모드인 경우 오디오 생성
-        let audioBase64 = null;
-        if (mode === 'talk') {
-            audioBase64 = await tts.synthesizeSpeechToBase64(initialResponse);
-        }
 
         res.json({
             success: true,
             sessionId,
-            initialMessage: initialResponse,
-            audioBase64
+            initialMessage: null,
+            audioBase64: null
         });
     } catch (error) {
         console.error('대화 초기화 오류:', error);

@@ -15,9 +15,7 @@
 
         <main>
             <div class="chat-area" id="chatArea">
-                <div class="message assistant">
-                    <div class="message-content">대화를 초기화하는 중...</div>
-                </div>
+                <!-- 사용자가 먼저 질문을 시작합니다 -->
             </div>
 
             <div class="input-area">
@@ -73,7 +71,6 @@
                 const data = await response.json();
                 if (data.success) {
                     sessionId = data.sessionId;
-                    addMessage('assistant', data.initialMessage);
                     
                     // 타이머 시작
                     timerInterval = setInterval(updateTimer, 1000);
