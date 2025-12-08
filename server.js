@@ -282,8 +282,28 @@ app.use((err, req, res, next) => {
 });
 
 // 서버 시작
-app.listen(PORT, () => {
+const HOST = '0.0.0.0'; // 모든 네트워크 인터페이스에서 접속 가능
+app.listen(PORT, HOST, () => {
+    const os = require('os');
+    const networkInterfaces = os.networkInterfaces();
+    let localIP = 'localhost';
+    
+    // 로컬 IP 주소 찾기
+    for (const interfaceName in networkInterfaces) {
+        const interfaces = networkInterfaces[interfaceName];
+        for (const iface of interfaces) {
+            // IPv4이고 내부 네트워크 주소인 경우
+            if (iface.family === 'IPv4' && !iface.internal) {
+                localIP = iface.address;
+                break;
+            }
+        }
+        if (localIP !== 'localhost') break;
+    }
+    
     console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
-    console.log(`http://localhost:${PORT} 에서 접속할 수 있습니다.`);
+    console.log(`로컬 접속: http://localhost:${PORT}`);
+    console.log(`네트워크 접속: http://${localIP}:${PORT}`);
+    console.log(`\n모바일 기기에서 http://${localIP}:${PORT} 로 접속하세요.`);
 });
 

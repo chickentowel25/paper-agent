@@ -2,8 +2,14 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Paper Agent">
     <title>Paper Agent - 음성 대화</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <link rel="stylesheet" href="style.css">
 </head>
@@ -32,6 +38,8 @@
         let sttInstance = null;
         let isRecording = false;
         let currentAudio = null; // 현재 재생 중인 오디오 객체
+        let latestRequestId = 0; // 가장 최근 요청 ID
+        let pendingRequests = new Set(); // 진행 중인 요청 ID들
 
         // 타이머 업데이트
         function updateTimer() {
@@ -119,56 +127,54 @@
             }
         }
 
-        // 마이크 버튼 이벤트
-        const micBtn = document.getElementById('micBtn');
-        
-        micBtn.addEventListener('mousedown', () => {
-            // 에이전트 발화 중지
+        // 모든 진행 중인 요청 취소
+        function cancelPendingRequests() {
+            // 진행 중인 모든 요청을 취소 처리
+            pendingRequests.clear();
+            // 현재 재생 중인 오디오도 중지
             stopCurrentAudio();
-            
-            if (sttInstance && !isRecording) {
+        }
+
+        // 마이크 버튼 토글 함수
+        function toggleRecording() {
+            if (!sttInstance) return;
+
+            if (isRecording) {
+                // 녹음 중이면 중지
+                sttInstance.stop();
+                micBtn.classList.remove('active');
+            } else {
+                // 녹음 중이 아니면 시작
+                // 에이전트 발화 중지 및 진행 중인 요청 취소
+                cancelPendingRequests();
                 sttInstance.start();
                 micBtn.classList.add('active');
             }
-        });
+        }
 
-        micBtn.addEventListener('mouseup', () => {
-            if (sttInstance && isRecording) {
-                sttInstance.stop();
-                micBtn.classList.remove('active');
-            }
-        });
-
-        micBtn.addEventListener('mouseleave', () => {
-            if (sttInstance && isRecording) {
-                sttInstance.stop();
-                micBtn.classList.remove('active');
-            }
+        // 마이크 버튼 이벤트
+        const micBtn = document.getElementById('micBtn');
+        
+        // 클릭 이벤트 (마우스)
+        micBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            toggleRecording();
         });
 
         // 터치 이벤트
         micBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            // 에이전트 발화 중지
-            stopCurrentAudio();
-            
-            if (sttInstance && !isRecording) {
-                sttInstance.start();
-                micBtn.classList.add('active');
-            }
-        });
-
-        micBtn.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (sttInstance && isRecording) {
-                sttInstance.stop();
-                micBtn.classList.remove('active');
-            }
+            toggleRecording();
         });
 
         // 메시지 전송
         async function sendMessage(transcript) {
             if (!sessionId || !transcript) return;
+
+            // 새로운 요청 ID 생성
+            latestRequestId++;
+            const requestId = latestRequestId;
+            pendingRequests.add(requestId);
 
             try {
                 const response = await fetch('/api/conversation/talk', {
@@ -181,22 +187,46 @@
                 });
 
                 const data = await response.json();
+                
+                // 이 요청이 가장 최근 요청인지 확인
+                if (!pendingRequests.has(requestId)) {
+                    // 이미 취소된 요청이면 무시
+                    return;
+                }
+
+                if (requestId !== latestRequestId) {
+                    // 더 최근 요청이 있으면 이 응답은 무시
+                    pendingRequests.delete(requestId);
+                    return;
+                }
+
                 if (data.success) {
+                    // 진행 중인 요청에서 제거
+                    pendingRequests.delete(requestId);
+                    
                     // TTS 재생
                     if (data.audioBase64) {
-                        playAudio(data.audioBase64);
+                        playAudio(data.audioBase64, requestId);
                     }
                 } else {
+                    pendingRequests.delete(requestId);
                     alert('응답 생성 실패: ' + data.error);
                 }
             } catch (error) {
+                pendingRequests.delete(requestId);
                 console.error('메시지 전송 오류:', error);
-                alert('서버 오류가 발생했습니다.');
+                // 네트워크 오류는 조용히 처리 (사용자가 이미 새로운 요청을 했을 수 있음)
             }
         }
 
         // 오디오 재생
-        function playAudio(base64Audio) {
+        function playAudio(base64Audio, requestId) {
+            // 이 요청이 여전히 가장 최근 요청인지 확인
+            if (requestId !== latestRequestId) {
+                // 더 최근 요청이 있으면 이 오디오는 재생하지 않음
+                return;
+            }
+
             // 기존 오디오가 재생 중이면 중지
             stopCurrentAudio();
             
@@ -205,17 +235,23 @@
             
             // 오디오 재생 완료 시 변수 초기화
             audio.addEventListener('ended', () => {
-                currentAudio = null;
+                if (currentAudio === audio) {
+                    currentAudio = null;
+                }
             });
             
             // 오디오 재생 중 오류 발생 시 변수 초기화
             audio.addEventListener('error', () => {
-                currentAudio = null;
+                if (currentAudio === audio) {
+                    currentAudio = null;
+                }
             });
             
             audio.play().catch(error => {
                 console.error('오디오 재생 오류:', error);
-                currentAudio = null;
+                if (currentAudio === audio) {
+                    currentAudio = null;
+                }
             });
         }
 
@@ -251,5 +287,6 @@
         // 페이지 로드 시 세션 초기화
         initializeSession();
     </script>
+    <script src="/register-sw.js"></script>
 </body>
 </html>
