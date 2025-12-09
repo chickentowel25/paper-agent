@@ -54,7 +54,90 @@ npm start
 ### 삼성 인터넷
 메뉴(⋮) → "데스크톱 사이트" 체크
 
-## 7. PromptBuilder 사용법
+## 7. Android 기기에서 localhost로 접속하기
+
+Android 기기에서 마이크 권한 문제를 해결하기 위해 localhost로 접속하는 방법입니다.
+
+이 방법을 사용하면 Android 기기에서 `http://localhost:3000`으로 직접 접속할 수 있습니다.
+
+### 1단계: Android 개발자 옵션 활성화
+
+1. Android 기기에서 **설정** → **휴대전화 정보** (또는 **디바이스 정보**)
+2. **빌드 번호**를 7번 연속으로 탭
+3. "개발자가 되었습니다!" 메시지 확인
+
+### 2단계: USB 디버깅 활성화
+
+1. **설정** → **개발자 옵션**
+2. **USB 디버깅** 활성화
+3. (선택) **USB 디버깅(보안 설정)** 활성화 (있는 경우)
+
+### 3단계: Android SDK Platform Tools 다운로드
+
+1. [Android SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools) 다운로드
+2. 압축 해제 (예: `C:\Users\USER\Downloads\platform-tools-latest-windows\platform-tools`)
+
+### 4단계: USB로 기기 연결 및 권한 허용
+
+1. USB 케이블로 Android 기기를 컴퓨터에 연결
+2. 기기에서 "USB 디버깅을 허용하시겠습니까?" 팝업이 나타나면:
+   - **허용** 또는 **확인** 선택
+   - **이 컴퓨터에서 항상 허용** 체크 (선택)
+3. USB 연결 모드를 **파일 전송** 또는 **MTP**로 설정
+
+### 5단계: adb reverse 설정
+
+PowerShell 또는 명령 프롬프트에서:
+
+```bash
+# adb.exe가 있는 폴더로 이동
+cd C:\Users\USER\Downloads\platform-tools-latest-windows\platform-tools
+
+# 기기 연결 확인
+.\adb.exe devices
+```
+
+`adb devices` 실행 시:
+- `unauthorized`가 표시되면 → 기기에서 USB 디버깅 권한 팝업 확인
+- `device`가 표시되면 → 정상 연결됨
+
+연결이 확인되면 포트 포워딩 설정:
+
+```bash
+.\adb.exe reverse tcp:3000 tcp:3000
+```
+
+성공 메시지가 없으면 정상입니다.
+
+### 6단계: 서버 실행 및 접속
+
+1. 서버 실행:
+   ```bash
+   npm start
+   ```
+
+2. Android 기기 브라우저에서 접속:
+   - 주소창에 `http://localhost:3000` 입력
+   - 또는 `http://127.0.0.1:3000` 입력
+
+### 문제 해결
+
+**"device unauthorized" 오류:**
+- 기기에서 USB 디버깅 권한 팝업 확인
+- USB 케이블을 뽑았다가 다시 연결
+- `adb kill-server` 실행 후 `adb devices` 재실행
+
+**기기가 인식되지 않음:**
+- USB 드라이버 설치 확인 (Samsung 기기는 Samsung USB Driver 필요)
+- 다른 USB 케이블/포트 시도
+- USB 연결 모드 확인 (파일 전송 모드)
+
+**포트 포워딩이 작동하지 않음:**
+- USB 연결이 유지되어 있는지 확인
+- `adb reverse --list`로 포워딩 상태 확인
+- `adb reverse --remove-all` 후 다시 설정
+
+## 8. PromptBuilder 사용법
 
 `modules/Responses.js`의 `PromptBuilder`를 사용하여 프롬프트를 체계적으로 구성할 수 있습니다.
 

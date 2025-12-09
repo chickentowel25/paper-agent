@@ -14,6 +14,7 @@ class PaperAgent {
    * @param {"none"|"minimal"|"low"|"medium"|"high"|"xhigh"} [options.reasoningEffort="low"]
    * @param {"low"|"medium"|"high"} [options.verbosity="medium"]
    * @param {boolean} [options.useWebSearch=true]
+   * @param {"talk"|"text"} [options.mode="text"]
    */
   constructor({
     apiKey = process.env.OPENAI_API_KEY,
@@ -22,6 +23,7 @@ class PaperAgent {
     reasoningEffort = "low",
     verbosity = "medium",
     useWebSearch = true,
+    mode = "text",
   } = {}) {
     if (!apiKey) {
       throw new Error("OPENAI_API_KEY 가 설정되어 있지 않습니다.");
@@ -33,6 +35,7 @@ class PaperAgent {
     this.reasoningEffort = reasoningEffort;
     this.verbosity = verbosity;
     this.useWebSearch = useWebSearch;
+    this.mode = mode;
 
     // 현재 선택된 논문 상태
     // { title: string, fileId?: string }
@@ -71,8 +74,42 @@ class PaperAgent {
     `.trim();
   }
 
+  /** Talk 모드 전용 프롬프트 */
+  static get TALK_MODE_INSTRUCTIONS_KO() {
+    return `
+역할: "Paper Agent" (음성 대화 모드). 사용자가 음성으로 논문에 대해 질문하고 있습니다.
+
+[1] 답변 스타일
+- 존댓말을 사용하여 친절하고 정중하게 답변합니다.
+- 문장 단위로 자연스럽게 대화하듯이 답변합니다.
+- 불릿 포인트(•, -, *), 번호 목록(1, 2, 3), 마크다운 포맷(#, ##), 기타 구조화된 포맷을 절대 사용하지 않습니다.
+- 순수 텍스트로만 답변하며, 문장으로 자연스럽게 연결합니다.
+
+[2] 답변 길이
+- 답변은 반드시 200자 이내로 제한합니다.
+- 핵심 내용만 간결하게 전달합니다.
+
+[3] 언어
+- 모든 답변은 한국어로만 작성합니다.
+
+[4] 논문 분석
+- 선택된 논문의 내용을 바탕으로 정확하게 답변합니다.
+- 추측이나 일반적인 설명보다는 논문에 명시된 내용을 우선합니다.
+- 사용자가 충분한 배경 지식을 가진 것으로 간주하고, 핵심만 간결하게 설명합니다.
+
+[5] 파일 활용
+- 사용자가 첨부한 파일(input_file)은 항상 "현재 선택된 논문"으로 취급합니다.
+- 모델이 파일에 직접 접근할 수 있으므로, 원문 인용이나 세부 수치 확인 시 파일 내용을 우선 참조합니다.
+    `.trim();
+  }
+
   /** 출력 모드에 따른 포매팅 지침 생성 */
   buildFormattingInstruction() {
+    // Talk 모드는 별도 프롬프트 사용
+    if (this.mode === "talk") {
+      return "";
+    }
+
     if (this.outputMode === "xml") {
       return `
 [5] XML 출력 규칙
@@ -124,6 +161,14 @@ class PaperAgent {
 
   /** 최종 instructions 문자열 */
   buildInstructions() {
+    // Talk 모드는 별도 프롬프트 사용
+    if (this.mode === "talk") {
+      return [
+        PaperAgent.TALK_MODE_INSTRUCTIONS_KO,
+        this.buildPaperContextInstruction(),
+      ].join("\n\n");
+    }
+
     return [
       PaperAgent.BASE_INSTRUCTIONS_KO,
       this.buildFormattingInstruction(),

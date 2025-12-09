@@ -430,6 +430,17 @@ body.text-page > header h1 {
   line-height: 1.6;
 }
 
+.message.assistant .message-content strong,
+.message.assistant .message-content b {
+  font-weight: 700;
+  color: #000000;
+}
+
+.message.assistant .message-content em,
+.message.assistant .message-content i {
+  font-style: italic;
+}
+
 .message.assistant .message-content ul,
 .message.assistant .message-content ol {
   margin: 0.8em 0;

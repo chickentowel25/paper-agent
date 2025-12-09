@@ -81,10 +81,11 @@ app.post('/api/conversation/initialize', async (req, res) => {
         // PaperAgent 인스턴스 생성
         const paperAgent = new PaperAgent({
             model: "o3",
-            outputMode: "markdown",
+            outputMode: mode === "talk" ? "plain" : "markdown",
             reasoningEffort: "low",
-            verbosity: mode === 'talk' ? "low" : "medium",
+            verbosity: "medium", // o3 모델은 'medium'만 지원
             useWebSearch: true,
+            mode: mode, // 'talk' 또는 'text'
         });
 
         // 논문 파일 업로드 및 설정
@@ -296,9 +297,10 @@ app.post('/api/conversation/talk', async (req, res) => {
         // Web Speech API로 변환된 텍스트 사용
         const userMessage = transcript.trim();
 
-        // PaperAgent를 사용하여 응답 생성 (음성 모드는 짧게)
+        // PaperAgent를 사용하여 응답 생성 (음성 모드는 200자 이내)
+        // 한국어 기준으로 약 200자 = 약 100토큰 정도이지만, 안전하게 150토큰으로 설정
         const response = await session.paperAgent.ask(userMessage, {
-            maxOutputTokens: 500
+            maxOutputTokens: 150
         });
 
         // TTS: 응답을 오디오로 변환
