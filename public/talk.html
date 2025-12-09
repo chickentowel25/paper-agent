@@ -94,20 +94,24 @@
 
         // STT 초기화
         function initializeSTT() {
-            if (!window.WebSpeechSTT) {
-                alert('Web Speech API를 지원하지 않는 브라우저입니다. Chrome 또는 Edge를 사용해주세요.');
+            if (!window.GoogleCloudSTT) {
+                alert('STT 모듈을 불러올 수 없습니다. 페이지를 새로고침해주세요.');
                 return;
             }
 
-            sttInstance = window.WebSpeechSTT.initialize({
+            sttInstance = window.GoogleCloudSTT.initialize({
                 lang: 'ko-KR',
                 onResult: (transcript, isFinal, confidence) => {
-                    if (isFinal && transcript) {
-                        sendMessage(transcript);
+                    // 최종 결과만 메시지로 전송
+                    if (isFinal && transcript && transcript.trim()) {
+                        sendMessage(transcript.trim());
                     }
                 },
                 onError: (error) => {
                     console.error('STT 오류:', error);
+                    micBtn.classList.remove('active');
+                    isRecording = false;
+                    alert('음성 인식 오류: ' + error.message);
                 },
                 onStart: () => {
                     isRecording = true;

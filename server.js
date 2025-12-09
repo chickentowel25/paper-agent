@@ -7,6 +7,7 @@ const fs = require('fs');
 const PaperParser = require('./modules/PaperParser');
 const OpenAIService = require('./modules/LLM');
 const TTS = require('./modules/TTS');
+const STT = require('./modules/STT');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,6 +30,7 @@ app.get('/', (req, res) => {
 const paperParser = new PaperParser();
 const openAIService = new OpenAIService();
 const tts = new TTS();
+const stt = new STT();
 
 // 세션 저장소 (실제 프로덕션에서는 Redis 등을 사용)
 const sessions = new Map();
@@ -145,7 +147,41 @@ app.post('/api/conversation/text', async (req, res) => {
     }
 });
 
-// 음성 모드: Web Speech API로 변환된 텍스트를 받아서 응답
+// STT: 오디오를 텍스트로 변환
+app.post('/api/stt/recognize', async (req, res) => {
+    try {
+        const { audioBase64, encoding, sampleRateHertz } = req.body;
+
+        if (!audioBase64) {
+            return res.status(400).json({ 
+                success: false, 
+                error: '오디오 데이터가 필요합니다.' 
+            });
+        }
+
+        // Base64를 Buffer로 변환
+        const audioBuffer = Buffer.from(audioBase64, 'base64');
+
+        // Google Cloud Speech로 인식
+        const result = await stt.recognize(audioBuffer, {
+            encoding: encoding || 'WEBM_OPUS',
+            sampleRateHertz: sampleRateHertz || 48000,
+            languageCode: 'ko-KR'
+        });
+
+        res.json({
+            success: true,
+            transcript: result.transcript,
+            confidence: result.confidence,
+            isFinal: result.isFinal
+        });
+    } catch (error) {
+        console.error('STT 인식 오류:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// 음성 모드: STT로 변환된 텍스트를 받아서 응답
 app.post('/api/conversation/talk', async (req, res) => {
     try {
         const { sessionId, transcript } = req.body;
