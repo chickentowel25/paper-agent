@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 
 const PaperParser = require('./modules/PaperParser');
-const OpenAIService = require('./modules/LLM');
+const PaperAgent = require('./modules/paperAgent');
 const TTS = require('./modules/TTS');
 const STT = require('./modules/STT');
 
@@ -28,7 +28,6 @@ app.get('/', (req, res) => {
 
 // 모듈 인스턴스 생성
 const paperParser = new PaperParser();
-const openAIService = new OpenAIService();
 const tts = new TTS();
 const stt = new STT();
 
@@ -71,18 +70,35 @@ app.post('/api/conversation/initialize', async (req, res) => {
             });
         }
 
-        // 논문 내용 파싱
-        const paperContent = await paperParser.parsePaper(paperFilename);
+        // 논문 파일 경로 생성
+        const paperPath = path.join(__dirname, 'papers', paperFilename);
+        
+        // 논문 제목 추출 (파일명에서 확장자 제거)
+        const paperTitle = paperFilename
+            .replace(/\.(html|pdf)$/i, '')
+            .replace(/_/g, ' ');
+
+        // PaperAgent 인스턴스 생성
+        const paperAgent = new PaperAgent({
+            model: "o3",
+            outputMode: "markdown",
+            reasoningEffort: "low",
+            verbosity: mode === 'talk' ? "low" : "medium",
+            useWebSearch: true,
+        });
+
+        // 논문 파일 업로드 및 설정
+        await paperAgent.uploadPaperFromPath(paperPath, paperTitle);
 
         // 세션 ID 생성
         const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // 세션 저장 (사용자가 먼저 시작하므로 빈 대화 히스토리로 시작)
+        // 세션 저장 (PaperAgent 인스턴스 포함)
         sessions.set(sessionId, {
             paperFilename,
-            paperContent,
+            paperTitle,
             mode,
-            conversationHistory: [],
+            paperAgent, // PaperAgent 인스턴스 저장
             startTime: Date.now()
         });
 
@@ -118,23 +134,9 @@ app.post('/api/conversation/text', async (req, res) => {
             });
         }
 
-        // 사용자 메시지를 히스토리에 추가
-        session.conversationHistory.push({
-            role: 'user',
-            content: message
-        });
-
-        // AI 응답 생성
-        const response = await openAIService.generateResponse(
-            session.paperContent,
-            session.conversationHistory,
-            session.mode
-        );
-
-        // AI 응답을 히스토리에 추가
-        session.conversationHistory.push({
-            role: 'assistant',
-            content: response
+        // PaperAgent를 사용하여 응답 생성
+        const response = await session.paperAgent.ask(message, {
+            maxOutputTokens: 2048
         });
 
         res.json({
@@ -211,23 +213,9 @@ app.post('/api/conversation/talk', async (req, res) => {
         // Web Speech API로 변환된 텍스트 사용
         const userMessage = transcript.trim();
 
-        // 사용자 메시지를 히스토리에 추가
-        session.conversationHistory.push({
-            role: 'user',
-            content: userMessage
-        });
-
-        // AI 응답 생성
-        const response = await openAIService.generateResponse(
-            session.paperContent,
-            session.conversationHistory,
-            session.mode
-        );
-
-        // AI 응답을 히스토리에 추가
-        session.conversationHistory.push({
-            role: 'assistant',
-            content: response
+        // PaperAgent를 사용하여 응답 생성 (음성 모드는 짧게)
+        const response = await session.paperAgent.ask(userMessage, {
+            maxOutputTokens: 500
         });
 
         // TTS: 응답을 오디오로 변환
@@ -269,11 +257,13 @@ app.post('/api/conversation/end', (req, res) => {
         const logData = {
             sessionId,
             paperFilename: session.paperFilename,
+            paperTitle: session.paperTitle,
             mode: session.mode,
             startTime: new Date(session.startTime).toISOString(),
             endTime: new Date().toISOString(),
             duration: Date.now() - session.startTime,
-            conversationHistory: session.conversationHistory
+            // PaperAgent는 내부적으로 previous_response_id로 메모리를 관리하므로
+            // conversationHistory는 별도로 저장하지 않음
         };
 
         // logs 폴더가 없으면 생성

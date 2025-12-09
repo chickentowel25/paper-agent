@@ -67,13 +67,22 @@ class PaperParser {
             const papersDir = path.join(__dirname, '..', 'papers');
             const files = fs.readdirSync(papersDir);
             
-            // HTML 파일만 필터링
-            const htmlFiles = files.filter(file => file.endsWith('.html'));
+            // HTML 및 PDF 파일 필터링
+            const paperFiles = files.filter(file => 
+                file.endsWith('.html') || file.endsWith('.pdf')
+            );
             
-            return htmlFiles.map(file => ({
-                filename: file,
-                title: file.replace('.html', '').replace(/_/g, ' ')
-            }));
+            return paperFiles.map(file => {
+                // 파일명에서 확장자 제거하여 제목 생성
+                const title = file
+                    .replace(/\.(html|pdf)$/i, '')
+                    .replace(/_/g, ' ');
+                
+                return {
+                    filename: file,
+                    title: title
+                };
+            });
         } catch (error) {
             console.error('논문 목록 가져오기 오류:', error);
             throw error;

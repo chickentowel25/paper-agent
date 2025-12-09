@@ -15,25 +15,25 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-page">
-    <header>
-        <div class="timer" id="timer">05:00</div>
-    </header>
+        <header>
+            <div class="timer" id="timer">05:00</div>
+        </header>
 
-    <main>
-        <div class="chat-area" id="chatArea">
+        <main>
+            <div class="chat-area" id="chatArea">
             <!-- 사용자가 먼저 질문을 시작합니다 -->
-        </div>
+            </div>
 
-        <div class="input-area">
-            <input 
-                type="text" 
-                id="messageInput" 
-                placeholder="메시지를 입력하세요..."
-                autocomplete="off"
-            >
-            <button id="sendBtn">전송</button>
-        </div>
-    </main>
+            <div class="input-area">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="메시지를 입력하세요..."
+                    autocomplete="off"
+                >
+                <button id="sendBtn">전송</button>
+            </div>
+        </main>
 
     <script>
         let sessionId = null;
@@ -135,7 +135,7 @@
             
             // 마지막 말풍선이 입력창 바로 위까지 스크롤
             setTimeout(() => {
-                chatArea.scrollTop = chatArea.scrollHeight;
+            chatArea.scrollTop = chatArea.scrollHeight;
             }, 10);
         }
 

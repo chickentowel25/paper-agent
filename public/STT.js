@@ -156,7 +156,7 @@ function initializeGoogleCloudSTT(options = {}) {
                     return;
                 }
 
-                isRecording = false;
+                    isRecording = false;
 
                 // 주기적 인식 중지
                 if (recognitionInterval) {
@@ -201,7 +201,7 @@ function initializeGoogleCloudSTT(options = {}) {
         },
         abort: async () => {
             try {
-                isRecording = false;
+                    isRecording = false;
 
                 if (recognitionInterval) {
                     clearInterval(recognitionInterval);
