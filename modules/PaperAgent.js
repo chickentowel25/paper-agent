@@ -176,9 +176,10 @@ class PaperAgent {
    * @param {string} question - 사용자의 질문 / 명령
    * @param {Object} [options]
    * @param {number} [options.maxOutputTokens=2048]
-   * @returns {Promise<string>} - 모델의 텍스트 응답
+   * @param {boolean} [options.stream=false] - 스트리밍 모드 사용 여부
+   * @returns {Promise<string>|AsyncIterable} - 모델의 텍스트 응답 또는 스트림
    */
-  async ask(question, { maxOutputTokens = 2048 } = {}) {
+  async ask(question, { maxOutputTokens = 2048, stream = false } = {}) {
     if (!this.paper) {
       throw new Error("논문이 아직 선택되지 않았습니다. 먼저 setPaper(...) 또는 uploadPaperFromPath(...)를 호출하세요.");
     }
@@ -228,6 +229,14 @@ class PaperAgent {
       requestParams.temperature = 0.3; // 요약/분석용이라 비교적 낮게
     }
 
+    // 스트리밍 모드
+    if (stream) {
+      requestParams.stream = true;
+      const streamResponse = await this.client.responses.create(requestParams);
+      return streamResponse; // AsyncIterable 반환
+    }
+
+    // 일반 모드
     const response = await this.client.responses.create(requestParams);
 
     this.lastResponseId = response.id;

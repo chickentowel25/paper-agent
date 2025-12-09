@@ -13,6 +13,7 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body class="text-page">
         <header>
@@ -91,7 +92,7 @@
             }
         }
 
-        // 메시지 전송
+        // 메시지 전송 (스트리밍)
         async function sendMessage() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -100,6 +101,23 @@
 
             input.value = '';
             addMessage('user', message);
+
+            // 에이전트 응답 메시지 요소 생성 (스트리밍용)
+            const chatArea = document.getElementById('chatArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message assistant';
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = '<span class="streaming-cursor">▋</span>';
+            messageDiv.appendChild(contentDiv);
+            chatArea.appendChild(messageDiv);
+
+            // 스크롤
+            setTimeout(() => {
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }, 10);
+
+            let accumulatedText = '';
 
             try {
                 const response = await fetch('/api/conversation/text', {
@@ -111,18 +129,105 @@
                     })
                 });
 
-                const data = await response.json();
-                if (data.success) {
-                    addMessage('assistant', data.response);
-                } else {
-                    alert('응답 생성 실패: ' + data.error);
+                if (!response.ok) {
+                    throw new Error('응답 생성 실패');
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    
+                    // 마지막 줄은 불완전할 수 있으므로 버퍼에 보관
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.trim() === '') continue;
+                        
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const jsonStr = line.slice(6).trim();
+                                if (!jsonStr) continue;
+                                
+                                const data = JSON.parse(jsonStr);
+                                console.log('받은 데이터:', data);
+                                
+                                if (data.type === 'chunk' && data.text) {
+                                    accumulatedText += data.text;
+                                    // 실시간으로 렌더링
+                                    renderStreamingMessage(contentDiv, accumulatedText);
+                                    
+                                    // 스크롤 유지
+                                    setTimeout(() => {
+                                        chatArea.scrollTop = chatArea.scrollHeight;
+                                    }, 10);
+                                } else if (data.type === 'done') {
+                                    // 스트리밍 완료 - 커서 제거
+                                    const cursor = contentDiv.querySelector('.streaming-cursor');
+                                    if (cursor) {
+                                        cursor.remove();
+                                    }
+                                } else if (data.type === 'error') {
+                                    throw new Error(data.error);
+                                }
+                            } catch (e) {
+                                // JSON 파싱 오류 로그
+                                console.error('데이터 파싱 오류:', e, '라인:', line);
+                            }
+                        }
+                    }
+                }
+                
+                // 남은 버퍼 처리
+                if (buffer.trim()) {
+                    try {
+                        if (buffer.startsWith('data: ')) {
+                            const data = JSON.parse(buffer.slice(6).trim());
+                            if (data.type === 'chunk' && data.text) {
+                                accumulatedText += data.text;
+                                renderStreamingMessage(contentDiv, accumulatedText);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('버퍼 처리 오류:', e);
+                    }
                 }
             } catch (error) {
                 console.error('메시지 전송 오류:', error);
-                alert('서버 오류가 발생했습니다.');
+                contentDiv.innerHTML = `<span style="color: red;">오류: ${escapeHtml(error.message)}</span>`;
             }
 
             input.focus();
+        }
+
+        // 스트리밍 메시지 렌더링
+        function renderStreamingMessage(element, text) {
+            // 마크다운 또는 XML 렌더링
+            let renderedContent = text;
+            
+            // XML인지 확인
+            if (text.trim().startsWith('<') && text.trim().endsWith('>')) {
+                renderedContent = `<pre class="xml-content">${escapeHtml(text)}</pre>`;
+            } else {
+                // 마크다운 렌더링
+                try {
+                    if (typeof marked !== 'undefined') {
+                        renderedContent = marked.parse(text);
+                    } else {
+                        renderedContent = escapeHtml(text).replace(/\n/g, '<br>');
+                    }
+                } catch (e) {
+                    renderedContent = escapeHtml(text).replace(/\n/g, '<br>');
+                }
+            }
+            
+            element.innerHTML = renderedContent + '<span class="streaming-cursor">▋</span>';
         }
 
         // 메시지 추가
@@ -130,13 +235,47 @@
             const chatArea = document.getElementById('chatArea');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
-            messageDiv.innerHTML = `<div class="message-content">${content}</div>`;
+            
+            // 마크다운 또는 XML 렌더링
+            let renderedContent = content;
+            if (role === 'assistant') {
+                // XML인지 확인 (시작 태그로 판단)
+                if (content.trim().startsWith('<') && content.trim().endsWith('>')) {
+                    // XML을 보기 좋게 포맷팅 (간단한 처리)
+                    renderedContent = `<pre class="xml-content">${escapeHtml(content)}</pre>`;
+                } else {
+                    // 마크다운 렌더링
+                    try {
+                        if (typeof marked !== 'undefined') {
+                            renderedContent = marked.parse(content);
+                        } else {
+                            // marked가 로드되지 않은 경우 기본 처리
+                            renderedContent = escapeHtml(content).replace(/\n/g, '<br>');
+                        }
+                    } catch (e) {
+                        console.error('마크다운 렌더링 오류:', e);
+                        renderedContent = escapeHtml(content).replace(/\n/g, '<br>');
+                    }
+                }
+            } else {
+                // 사용자 메시지는 그대로 표시 (이스케이프만)
+                renderedContent = escapeHtml(content);
+            }
+            
+            messageDiv.innerHTML = `<div class="message-content">${renderedContent}</div>`;
             chatArea.appendChild(messageDiv);
             
             // 마지막 말풍선이 입력창 바로 위까지 스크롤
             setTimeout(() => {
             chatArea.scrollTop = chatArea.scrollHeight;
             }, 10);
+        }
+
+        // HTML 이스케이프 함수
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // 세션 종료
