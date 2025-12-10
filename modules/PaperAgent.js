@@ -9,7 +9,7 @@ class PaperAgent {
   /**
    * @param {Object} options
    * @param {string} [options.apiKey=process.env.OPENAI_API_KEY]
-   * @param {string} [options.model="o3"]
+   * @param {string} [options.model="gpt-4o"]
    * @param {"markdown"|"xml"|"plain"} [options.outputMode="markdown"]
    * @param {"none"|"minimal"|"low"|"medium"|"high"|"xhigh"} [options.reasoningEffort="low"]
    * @param {"low"|"medium"|"high"} [options.verbosity="medium"]
@@ -18,7 +18,7 @@ class PaperAgent {
    */
   constructor({
     apiKey = process.env.OPENAI_API_KEY,
-    model = "o3",
+    model = "gpt-4o",
     outputMode = "markdown",
     reasoningEffort = "low",
     verbosity = "medium",
@@ -260,17 +260,19 @@ class PaperAgent {
       tools: tools.length ? tools : undefined,
       previous_response_id: this.lastResponseId || undefined,
       max_output_tokens: maxOutputTokens,
-      reasoning: {
-        effort: this.reasoningEffort,
-      },
-      text: {
-        format: { type: "text" },
-        verbosity: this.verbosity,
-      },
     };
 
-    // o3 모델은 temperature를 지원하지 않으므로 조건부로 추가
-    if (!this.model.startsWith('o3')) {
+    // o3 모델 전용 파라미터 (reasoning, verbosity)
+    if (this.model.startsWith('o3')) {
+      requestParams.reasoning = {
+        effort: this.reasoningEffort,
+      };
+      requestParams.text = {
+        format: { type: "text" },
+        verbosity: this.verbosity,
+      };
+    } else {
+      // gpt-4o 등 다른 모델은 temperature 사용
       requestParams.temperature = 0.3; // 요약/분석용이라 비교적 낮게
     }
 
@@ -340,7 +342,7 @@ import PaperAgent from "./paperAgent.js";
 async function main() {
   const agent = new PaperAgent({
     // apiKey: "sk-...", // 또는 환경변수 OPENAI_API_KEY 사용
-    model: "o3",
+    model: "gpt-4o",
     outputMode: "markdown", // "xml" 로 바꾸면 XML 포맷으로 응답
     reasoningEffort: "low",
     verbosity: "medium",

@@ -80,10 +80,10 @@ app.post('/api/conversation/initialize', async (req, res) => {
 
         // PaperAgent 인스턴스 생성
         const paperAgent = new PaperAgent({
-            model: "o3",
+            model: "gpt-4o",
             outputMode: mode === "talk" ? "plain" : "markdown",
             reasoningEffort: "low",
-            verbosity: "medium", // o3 모델은 'medium'만 지원
+            verbosity: "medium",
             useWebSearch: true,
             mode: mode, // 'talk' 또는 'text'
         });
