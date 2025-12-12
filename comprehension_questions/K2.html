@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>K2 연구 이해도 평가</title>
+<style>
+body{font-family:Arial;max-width:900px;margin:40px auto;padding:20px}
+.user-info{margin-bottom:30px;padding:20px;background:#f5f5f5;border-radius:8px}
+.user-info label{display:block;margin-bottom:10px;font-weight:600}
+.user-info input[type="text"]{width:100%;padding:10px;font-size:16px;border:2px solid #ddd;border-radius:4px;margin-bottom:20px}
+.mode-selection{margin-bottom:20px}
+.mode-selection label{display:inline-block;margin-right:20px;cursor:pointer;padding:8px 16px;background:#fff;border:2px solid #ddd;border-radius:4px}
+.mode-selection input[type="radio"]{margin-right:8px}
+.mode-selection input[type="radio"]:checked + span{font-weight:600}
+.question{margin-bottom:25px}
+label{display:block;padding:6px;border-radius:6px;cursor:pointer}
+.correct{background:#d4f7d4}
+.wrong{background:#f8d0d0}
+.neutral{background:#eee}
+button{padding:12px 24px;font-size:16px;cursor:pointer;background:#000;color:#fff;border:none;border-radius:4px}
+button:hover{background:#333}
+#score{margin-top:20px;font-size:20px;font-weight:600;padding:15px;background:#f0f0f0;border-radius:4px}
+</style>
+</head>
+<body>
+
+<h1>K2 <em>산업디자인 영역에서 FDM 방식 3D 프린팅 기술 활용에 대한 연구</em> 이해도 평가</h1>
+
+<div class="user-info">
+    <label for="userName">이름:</label>
+    <input type="text" id="userName" placeholder="이름을 입력하세요" required>
+    
+    <div class="mode-selection">
+        <label><input type="radio" name="mode" value="direct" checked><span>직접 읽기</span></label>
+        <label><input type="radio" name="mode" value="text"><span>텍스트 챗봇</span></label>
+        <label><input type="radio" name="mode" value="voice"><span>음성 챗봇</span></label>
+    </div>
+</div>
+
+<form id="quiz"></form>
+<button onclick="submitQuiz()" type="button">제출</button>
+<div id="score"></div>
+
+<script>
+const questions = [
+{q:"이 논문의 주요 연구 목적을 가장 잘 나타내는 것은 무엇인가?",o:["FDM 방식의 기계적 강도를 다른 3D 프린팅 방식과 수치 비교하기 위해","FDM 프린터의 내부 구조를 해석하고 열해석 시뮬레이션을 수행하기 위해","산업디자인 영역에서 FDM 방식 3D 프린팅 기술의 활용 동향을 분석하고, 새로운 제품 제조 방식으로서의 가능성을 탐색하기 위해","건축 구조물용 대형 3D 프린터의 안전성을 평가하기 위해"]},
+{q:"3D 프린팅에 대한 일반적인 설명으로 옳지 않은 것은?",o:["액체 또는 고체 상태의 재료를 적층하여 3차원 형상을 제조하는 기술이다.","프로토타입 제작뿐 아니라 실제 제품 제조에도 활용될 수 있다.","재료를 덩어리째 준비한 뒤 절삭하여 내부를 깎아내는 절삭 가공 기술을 의미한다.","다양한 산업 분야에서 높은 접근성과 응용 가능성을 바탕으로 활용되고 있다."]},
+{q:"FDM 방식 3D 프린팅에 대한 설명으로 옳지 않은 것은?",o:["열가소성 소재를 녹여 노즐로 압출하여 적층하는 방식이다.","적층 결(layer lines)이 뚜렷하게 나타나 출력 품질과 정밀도에 한계가 있다.","액체 상태의 광경화성 수지를 레이저로 경화시키는 방식으로, SLA 방식과 동일하다.","출력 후 표면 연마나 퍼티(putty) 작업 등 후가공이 필요한 경우가 많다."]},
+{q:"FDM 3D 프린팅 역사와 관련된 설명으로 가장 적절한 것은?",o:["FDM 방식은 2000년대 후반 RepRap 프로젝트에서 처음 고안되었다.","FDM 방식은 특허가 여전히 유지되고 있어 오픈소스 보급이 제한적이다.","RepRap 프로젝트는 자기복제가 가능한 저렴한 3D 프린터를 목표로 하였고, FDM 방식의 대중화에 큰 영향을 주었다.","FDM 방식은 산업용 대형 장비에만 제한적으로 사용되며, 데스크톱 3D 프린터와는 연결이 없다."]},
+{q:"다음 중 Core-XY 방식 FDM 3D 프린터에 대한 설명으로 옳은 것은?",o:["프린터 헤드가 X, Z축으로만 이동하고, 베드가 Y축으로 이동한다.","3개의 암(arm)이 헤드를 지지하며, 원형 베드를 사용하는 구조이다.","프린터 헤드가 X, Y축을 따라 이동하고, 베드가 Z축으로 움직여 모델을 출력한다.","원통 좌표계를 사용하여 회전하는 베드 위에 적층하는 방식이다."]},
+{q:"산업디자인 교육 영역에서 FDM 3D 프린터 활용에 대한 설명으로 옳은 것은?",o:["조형(form) 교육에서는 2D 스케치만으로 충분하므로 물리적 모형은 불필요하다.","FDM 3D 프린터는 CMF(color, material, finish) 교육에서 실제 질감과 무게를 가진 물리 모델 제작에 활용될 수 있다.","표면 거칠기가 커서 교육 목적으로 사용하기에 부적합하다.","교육 현장에서는 SLA 방식만 사용되고, FDM 방식은 안전상의 이유로 거의 사용되지 않는다."]},
+{q:"프로토타이핑 영역에서 FDM 방식이 가지는 장점으로 가장 적절한 것은?",o:["출력 속도는 빠르지만 재료 단가가 높아 대형 프로토타입에는 부적합하다.","대형 프로토타입 제작 시 파트를 분할하지 않고 한 번에 출력하기 어렵다.","높은 접근성과 경제성을 바탕으로 다수의 프로토타입을 빠르게 제작하여 반복적인 검증과 개선에 활용할 수 있다.","출력 후 세척·경화 공정이 복잡하여 빠른 피드백 루프를 만들기 어렵다."]},
+{q:"다음 중 재활용 소재를 활용한 FDM 제품 제조 사례에 대한 설명으로 옳은 것은?",o:["Creme Atelier는 시멘트를 재료로 건축용 구조물을 제작한다.","Philips MyCreation의 coastal breeze 조명은 폐그물을 재활용한 소재를 사용한다.","Hors studio의 Trosne 의자는 폐유리 분말을 활용한 조명 제품이다.","VanPlestik은 주로 신제품 플라스틱만 사용하며, 재활용 소재는 배제한다."]},
+{q:"Fuzzy skin 설정에 대한 설명으로 옳은 것은?",o:["레이어 높이를 0으로 만들어 완전히 매끄러운 표면을 구현하는 기능이다.","출력 시간을 단축하기 위해 내부 인필을 제거하는 설정이다.","노즐이 모델의 바깥쪽 레이어를 불규칙한 경로로 이동하도록 하여 거친 표면 질감을 형성하는 기능이다.","출력 중 노즐 온도를 자동으로 조절해 변형을 최소화하는 기능이다."]},
+{q:"이 논문의 결론 및 적용점에 대한 설명으로 가장 적절한 것은?",o:["FDM 방식은 단점이 많으므로 산업디자인 교육에서 사용을 지양해야 한다.","3D 프린터는 단순한 목업 제작에만 사용해야 하며, 사용자 경험과는 무관하다.","산업디자인과 기계공학 등 학제 간 협업을 통해 소재, 노즐·부품 변경, 소프트웨어 활용을 포함한 응용 교육을 강화할 필요가 있다.","향후 연구에서는 FDM 방식을 완전히 배제하고 SLA 방식만 다루어야 한다."]}
+];
+const answers = [2,2,2,2,2,1,2,1,2,2];
+
+const quiz=document.getElementById("quiz");
+questions.forEach((q,i)=>{
+ let d=document.createElement("div");d.className="question";
+ d.innerHTML=`<p>${i+1}. ${q.q}</p>`;
+ q.o.forEach((t,j)=>{
+  d.innerHTML+=`<label><input type="radio" name="q${i}" value="${j}">${t}</label>`;
+ });
+ quiz.appendChild(d);
+});
+
+const paperId = 'K2';
+
+async function submitQuiz(){
+ const userName = document.getElementById("userName").value.trim();
+ if(!userName){
+  alert("이름을 입력해주세요.");
+  return;
+ }
+ 
+ const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+ let s=0;
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  document.querySelectorAll(`input[name=q${i}]`).forEach(inp=>{
+    let l=inp.parentElement;
+    l.classList.remove("correct","wrong","neutral");
+    if(inp.value==answers[i])l.classList.add("correct");
+    else if(sel&&inp===sel)l.classList.add("wrong");
+    else l.classList.add("neutral");
+  });
+  if(sel&&sel.value==answers[i])s++;
+ });
+ 
+ const totalQuestions = questions.length;
+ const accuracy = (s / totalQuestions * 100).toFixed(1);
+ document.getElementById("score").innerText=`점수: ${s} / ${totalQuestions} (정답률: ${accuracy}%)`;
+ 
+ // 오답 문제 번호 수집 (1부터 시작)
+ const wrongAnswers = [];
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  if(!sel || sel.value != answers[i]){
+   wrongAnswers.push(i + 1); // 문제 번호는 1부터 시작
+  }
+ });
+ 
+ // JSON 데이터 생성
+ const resultData = {
+  name: userName,
+  paper: paperId,
+  mode: selectedMode,
+  score: s,
+  wrong_answers: wrongAnswers,
+  timestamp: new Date().toISOString()
+ };
+ 
+ // 서버에 저장
+ try {
+  const response = await fetch('http://localhost:4000/api/save-result', {
+   method: 'POST',
+   headers: {
+    'Content-Type': 'application/json'
+   },
+   body: JSON.stringify(resultData)
+  });
+  
+  if(!response.ok){
+   throw new Error('저장 실패');
+  }
+  
+  console.log('결과가 저장되었습니다.');
+ } catch(error){
+  console.error('저장 오류:', error);
+  // 오프라인일 경우 로컬 스토리지에 저장
+  localStorage.setItem(`result_${userName}_${paperId}_${Date.now()}`, JSON.stringify(resultData));
+  alert('서버 연결 실패. 로컬에 저장되었습니다.');
+ }
+}
+</script>
+</body>
+</html>

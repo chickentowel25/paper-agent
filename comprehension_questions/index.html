@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연구 이해도 평가 - 논문 선택</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #000000;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        section {
+            margin-bottom: 60px;
+        }
+
+        section h2 {
+            font-size: 32px;
+            color: #000000;
+            margin-bottom: 32px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .paper-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .paper-item {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #e0e0e0;
+        }
+
+        .paper-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-color: #000000;
+        }
+
+        .paper-item.selected {
+            background: #000000;
+            color: #ffffff;
+            border-color: #000000;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .paper-title {
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 1.6;
+        }
+
+        .paper-title em {
+            font-style: italic;
+        }
+
+        .next-btn {
+            display: block;
+            margin: 60px auto 0;
+            padding: 20px 80px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            background: #000000;
+            border: 2px solid #000000;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .next-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            background: #333333;
+        }
+
+        .next-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: #cccccc;
+            border-color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>연구 이해도 평가</h1>
+        
+        <main>
+            <section class="paper-selection">
+                <h2>문제풀이할 논문 선택</h2>
+                <div class="paper-list" id="paperList"></div>
+            </section>
+
+            <button class="next-btn" id="nextBtn" disabled>
+                다음으로
+            </button>
+        </main>
+    </div>
+
+    <script>
+        const papers = [
+            { id: 'K1', title: 'K1 <em>멀티모달 생성형 AI의 메타인지 연구 디자인 학습자를 중심으로</em> 이해도 평가' },
+            { id: 'K2', title: 'K2 <em>산업디자인 영역에서 FDM 방식 3D 프린팅 기술 활용에 대한 연구</em> 이해도 평가' },
+            { id: 'K3', title: 'K3 <em>ADHD 질환 아동에게 적합한 인터랙션에 기반한 작업기억훈련 치료 도구의 디자인 제안</em> 이해도 평가' },
+            { id: 'K4', title: 'K4 <em>인간 공학적 접근 방식에 기반한 VR 경험의 디자인 인종과 성별에 따른 페이스 인터페이스</em> 이해도 평가' },
+            { id: 'K5', title: 'K5 <em>금융 피싱 맥락에서의 UX 개입 행동 유도성과 수용성의 균형에 대한 실험적 분석</em> 이해도 평가' },
+            { id: 'K6', title: 'K6 <em>AI 에이전트의 호칭지칭어 사용이 지각된 의인화와 사용자 경험에 미치는 영향 1대1 대화</em> 이해도 평가' },
+            { id: 'K7', title: 'K7 <em>대화형 인공지능 에이전트와 공감적 소통을 위한 눈 형태 UI 디자인 제안 기쁨의 감정을 중</em> 이해도 평가' }
+        ];
+
+        let selectedPaper = null;
+
+        // 논문 목록 렌더링
+        function renderPapers() {
+            const paperList = document.getElementById('paperList');
+            paperList.innerHTML = '';
+
+            papers.forEach(paper => {
+                const paperItem = document.createElement('div');
+                paperItem.className = 'paper-item';
+                paperItem.dataset.id = paper.id;
+                paperItem.innerHTML = `<div class="paper-title">${paper.title}</div>`;
+                paperItem.addEventListener('click', () => {
+                    document.querySelectorAll('.paper-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    paperItem.classList.add('selected');
+                    selectedPaper = paper.id;
+                    checkReady();
+                });
+                paperList.appendChild(paperItem);
+            });
+        }
+
+        // 다음 버튼 활성화 확인
+        function checkReady() {
+            const nextBtn = document.getElementById('nextBtn');
+            if (selectedPaper) {
+                nextBtn.disabled = false;
+            } else {
+                nextBtn.disabled = true;
+            }
+        }
+
+        // 다음 버튼 클릭
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (!selectedPaper) return;
+            window.location.href = `${selectedPaper}.html`;
+        });
+
+        // 페이지 로드 시 논문 목록 렌더링
+        renderPapers();
+    </script>
+</body>
+</html>
+

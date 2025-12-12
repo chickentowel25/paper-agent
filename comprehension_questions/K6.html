@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>K6 연구 이해도 평가</title>
+<style>
+body{font-family:Arial;max-width:900px;margin:40px auto;padding:20px}
+.user-info{margin-bottom:30px;padding:20px;background:#f5f5f5;border-radius:8px}
+.user-info label{display:block;margin-bottom:10px;font-weight:600}
+.user-info input[type="text"]{width:100%;padding:10px;font-size:16px;border:2px solid #ddd;border-radius:4px;margin-bottom:20px}
+.mode-selection{margin-bottom:20px}
+.mode-selection label{display:inline-block;margin-right:20px;cursor:pointer;padding:8px 16px;background:#fff;border:2px solid #ddd;border-radius:4px}
+.mode-selection input[type="radio"]{margin-right:8px}
+.mode-selection input[type="radio"]:checked + span{font-weight:600}
+.question{margin-bottom:25px}
+label{display:block;padding:6px;border-radius:6px;cursor:pointer}
+.correct{background:#d4f7d4}
+.wrong{background:#f8d0d0}
+.neutral{background:#eee}
+button{padding:12px 24px;font-size:16px;cursor:pointer;background:#000;color:#fff;border:none;border-radius:4px}
+button:hover{background:#333}
+#score{margin-top:20px;font-size:20px;font-weight:600;padding:15px;background:#f0f0f0;border-radius:4px}
+</style>
+</head>
+<body>
+
+<h1>K6 <em>AI 에이전트의 호칭지칭어 사용이 지각된 의인화와 사용자 경험에 미치는 영향 1대1 대화</em> 이해도 평가</h1>
+
+<div class="user-info">
+    <label for="userName">이름:</label>
+    <input type="text" id="userName" placeholder="이름을 입력하세요" required>
+    
+    <div class="mode-selection">
+        <label><input type="radio" name="mode" value="direct" checked><span>직접 읽기</span></label>
+        <label><input type="radio" name="mode" value="text"><span>텍스트 챗봇</span></label>
+        <label><input type="radio" name="mode" value="voice"><span>음성 챗봇</span></label>
+    </div>
+</div>
+
+<form id="quiz"></form>
+<button onclick="submitQuiz()" type="button">제출</button>
+<div id="score"></div>
+
+<script>
+const questions = [
+{q:"이 연구의 가장 핵심적인 연구 목적을 가장 잘 나타내는 것은 무엇인가?",o:["한국어 호칭 체계의 문법적 분류를 제안하기 위해","VUI를 활용한 AI 에이전트의 처리 속도와 인식률을 향상시키기 위해","AI 에이전트가 사용하는 호칭/지칭어 유형이 1대1 VUI 대화 상황에서 지각된 의인화와 사용자 경험(신뢰도, 만족도, 지속적 사용의도)에 미치는 영향을 분석하기 위해","스마트 스피커와 스마트 홈 기기의 하드웨어 설계 가이드를 제시하기 위해"]},
+{q:"이 연구에서 조작된 독립변수(실험 조건)에 대한 설명으로 옳은 것은?",o:["발화 속도 2수준(빠름/보통)과 음성 성별 2수준(남/여)","호칭/지칭어 유형 3수준(이름형, 일반 명사형, 호칭/지칭어 미사용)","대화 주제 3수준(식당, 날씨, 금융)","기기 유형 2수준(스마트폰, 스마트 스피커)"]},
+{q:"이 연구에서 주요 종속변수로 측정한 항목의 조합으로 가장 적절한 것은?",o:["지각된 의인화, 신뢰도, 만족도, 지속적 사용의도","사용 빈도, 이탈률, 과금 의향","음성 인식 오류율, 응답 지연 시간","서비스 품질, 가격 만족도, 브랜드 충성도"]},
+{q:"실험 참여자에 대한 설명으로 옳은 것은?",o:["AI 에이전트 사용 경험이 거의 없는 60대 이상 28명을 대상으로 했다.","다양한 연령층 100명을 온라인 설문만으로 조사했다.","주 5회 이상 AI 에이전트를 사용하는 28명(남 13명, 여 15명)을 대상으로, 모두 세 조건을 경험하게 하는 반복측정 설계를 사용했다.","특정 기업 사내 직원 50명을 대상으로, 한 조건만 경험하게 하는 집단 간 설계를 사용했다."]},
+{q:"이 연구에서 사용한 실험 환경 및 도구에 대한 설명으로 가장 적절한 것은?",o:["자체 개발한 TTS 엔진과 텍스트 기반 챗봇 UI만 사용하였다.","ChatGPT 4.0 VUI 기능과 여성 음성 'Maple'을 사용하고, 오즈의 마법사(Wizard of Oz) 방식으로 1대1 대화를 구성하였다.","스마트 스피커 실제 서비스 로그만을 수집하였고, 실험실 통제 상황은 사용하지 않았다.","음성은 사용자의 실제 친구 목소리를 녹음해 재생하는 방식으로 구현하였다."]},
+{q:"지각된 의인화(perceived anthropomorphism)에 대한 설명으로 옳은 것은?",o:["AI 에이전트가 실제 인간인지 여부를 정확히 구분하는 능력이다.","사용자가 AI 에이전트를 도구로만 인식하는 정도이다.","비인간 대상을 사회적 단서와 인간 경험에 기반해 사람처럼 해석하는 정도로, 인간적인 음성·어조·호칭 등에 의해 촉진될 수 있다.","AI 모델의 매개변수 수와 연산량을 나타내는 기술적 지표이다."]},
+{q:"반복측정 ANOVA 및 사후검정 결과에 대한 설명으로 옳은 것은?",o:["세 조건(이름형, 일반 명사형, 미사용) 간에 어떤 변수에서도 유의미한 차이가 나타나지 않았다.","일반 명사형 조건이 네 변수(의인화, 신뢰도, 만족도, 지속적 사용의도) 모두에서 가장 높은 평균값을 보였다.","이름형 조건은 네 변수 모두에서 일반 명사형 및 미사용 조건보다 유의하게 높은 값을 보였고, 일반 명사형과 미사용 간에는 유의한 차이가 없었다.","미사용 조건이 만족도와 지속적 사용의도에서 가장 높았으나, 의인화에서는 가장 낮았다."]},
+{q:"연구 가설(H1~H8)의 채택/기각 결과에 대한 설명으로 옳은 것은?",o:["이름형 관련 가설(H1, H3, H5, H7)은 모두 기각되었고, 일반 명사형 관련 가설(H2, H4, H6, H8)은 모두 채택되었다.","이름형 관련 가설(H1, H3, H5, H7)은 모두 채택되었고, 일반 명사형 관련 가설(H2, H4, H6, H8)은 모두 기각되었다.","H1, H2, H3만 채택되었고 나머지는 모두 기각되었다.","모든 가설이 부분적으로만 지지되어 통계적으로 유의하지 않았다."]},
+{q:"심층 인터뷰에서 드러난 일반 명사형 호칭/지칭어(예: \"사용자님\")에 대한 사용자 반응을 가장 잘 요약한 것은?",o:["대다수 참가자가 \"가장 인간적이고 친밀하다\"며 선호하였다.","상업적·형식적·거리감이 난다는 인식과, 전문적·AI다워서 자연스럽다는 인식이 공존했으며, 의인화를 크게 높이지는 못했다.","개인정보 유출 우려가 커서 법적으로 금지해야 한다는 의견이 지배적이었다.","이름형보다 더 강한 거부감을 일으켜 모든 참가자가 불편함을 호소하였다."]},
+{q:"이 연구의 디자인 시사점으로 가장 적절한 것은?",o:["호칭/지칭어는 무조건 사용하지 않는 것이 사용자 경험을 향상시킨다.","모든 상황에서 이름형만 일관되게 사용하는 것이 가장 바람직하다.","한국어 화자의 문화적·사회적 맥락을 고려한 호칭/지칭어 전략이 중요하며, 특히 이름형 호칭은 의인화와 사용자 경험을 향상시키지만, 상황과 개인정보 민감도를 고려한 맥락 적응형 설계가 필요하다.","영어식 2인칭 대명사(you)에 해당하는 표현만 사용하면 언어권과 무관하게 동일한 효과를 얻을 수 있다."]}
+];
+const answers = [2,1,0,2,1,2,2,1,1,2];
+
+const quiz=document.getElementById("quiz");
+questions.forEach((q,i)=>{
+ let d=document.createElement("div");d.className="question";
+ d.innerHTML=`<p>${i+1}. ${q.q}</p>`;
+ q.o.forEach((t,j)=>{
+  d.innerHTML+=`<label><input type="radio" name="q${i}" value="${j}">${t}</label>`;
+ });
+ quiz.appendChild(d);
+});
+
+const paperId = 'K6';
+
+async function submitQuiz(){
+ const userName = document.getElementById("userName").value.trim();
+ if(!userName){
+  alert("이름을 입력해주세요.");
+  return;
+ }
+ 
+ const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+ let s=0;
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  document.querySelectorAll(`input[name=q${i}]`).forEach(inp=>{
+    let l=inp.parentElement;
+    l.classList.remove("correct","wrong","neutral");
+    if(inp.value==answers[i])l.classList.add("correct");
+    else if(sel&&inp===sel)l.classList.add("wrong");
+    else l.classList.add("neutral");
+  });
+  if(sel&&sel.value==answers[i])s++;
+ });
+ 
+ const totalQuestions = questions.length;
+ const accuracy = (s / totalQuestions * 100).toFixed(1);
+ document.getElementById("score").innerText=`점수: ${s} / ${totalQuestions} (정답률: ${accuracy}%)`;
+ 
+ // JSON 데이터 생성
+ const resultData = {
+  name: userName,
+  paper: paperId,
+  mode: selectedMode,
+  score: s,
+  total: totalQuestions,
+  accuracy: parseFloat(accuracy),
+  timestamp: new Date().toISOString()
+ };
+ 
+ // 서버에 저장
+ try {
+  const response = await fetch('http://localhost:4000/api/save-result', {
+   method: 'POST',
+   headers: {
+    'Content-Type': 'application/json'
+   },
+   body: JSON.stringify(resultData)
+  });
+  
+  if(!response.ok){
+   throw new Error('저장 실패');
+  }
+  
+  console.log('결과가 저장되었습니다.');
+ } catch(error){
+  console.error('저장 오류:', error);
+  // 오프라인일 경우 로컬 스토리지에 저장
+  localStorage.setItem(`result_${userName}_${paperId}_${Date.now()}`, JSON.stringify(resultData));
+  alert('서버 연결 실패. 로컬에 저장되었습니다.');
+ }
+}
+</script>
+</body>
+</html>

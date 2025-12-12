@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>K3 연구 이해도 평가</title>
+<style>
+body{font-family:Arial;max-width:900px;margin:40px auto;padding:20px}
+.user-info{margin-bottom:30px;padding:20px;background:#f5f5f5;border-radius:8px}
+.user-info label{display:block;margin-bottom:10px;font-weight:600}
+.user-info input[type="text"]{width:100%;padding:10px;font-size:16px;border:2px solid #ddd;border-radius:4px;margin-bottom:20px}
+.mode-selection{margin-bottom:20px}
+.mode-selection label{display:inline-block;margin-right:20px;cursor:pointer;padding:8px 16px;background:#fff;border:2px solid #ddd;border-radius:4px}
+.mode-selection input[type="radio"]{margin-right:8px}
+.mode-selection input[type="radio"]:checked + span{font-weight:600}
+.question{margin-bottom:25px}
+label{display:block;padding:6px;border-radius:6px;cursor:pointer}
+.correct{background:#d4f7d4}
+.wrong{background:#f8d0d0}
+.neutral{background:#eee}
+button{padding:12px 24px;font-size:16px;cursor:pointer;background:#000;color:#fff;border:none;border-radius:4px}
+button:hover{background:#333}
+#score{margin-top:20px;font-size:20px;font-weight:600;padding:15px;background:#f0f0f0;border-radius:4px}
+</style>
+</head>
+<body>
+
+<h1>K3 <em>ADHD 질환 아동에게 적합한 인터랙션에 기반한 작업기억훈련 치료 도구의 디자인 제안</em> 이해도 평가</h1>
+
+<div class="user-info">
+    <label for="userName">이름:</label>
+    <input type="text" id="userName" placeholder="이름을 입력하세요" required>
+    
+    <div class="mode-selection">
+        <label><input type="radio" name="mode" value="direct" checked><span>직접 읽기</span></label>
+        <label><input type="radio" name="mode" value="text"><span>텍스트 챗봇</span></label>
+        <label><input type="radio" name="mode" value="voice"><span>음성 챗봇</span></label>
+    </div>
+</div>
+
+<form id="quiz"></form>
+<button onclick="submitQuiz()" type="button">제출</button>
+<div id="score"></div>
+
+<script>
+const questions = [
+{q:"이 연구의 가장 핵심적인 연구 목적을 가장 잘 나타내는 것은 무엇인가?",o:["ADHD 아동의 약물 치료 효과를 다른 약물과 비교하기 위해","ADHD 아동의 부모 교육 프로그램을 설계하기 위해","ADHD 질환 아동에게 적합한 인터랙션에 기반한 작업기억훈련 치료 도구를 제안하기 위해","성인 ADHD 환자를 위한 모바일 앱을 개발하기 위해"]},
+{q:"연구에서 특히 중점적으로 다룬 ADHD 문제 행동 유형과 대상 연령에 대한 설명으로 옳은 것은?",o:["충동적 과잉행동, 4–7세 학령 전기 아동","부주의 행동, 8–12세 학령 초기 아동","충동적 과잉행동, 13–18세 청소년","부주의 행동, 성인기 이후 대상"]},
+{q:"병리적(pathological) 접근의 치료프로그램에 대한 설명으로 옳은 것은?",o:["미술·음악·놀이 활동을 통해 간접적으로 인지 기능을 향상시킨다.","상담사의 직접적인 피드백을 통해 문제 행동을 즉각적으로 수정하는 데 효과적이다.","준비와 진행에 높은 인적‧물적 비용이 든다.","아동의 정서적 공감과 자발성을 가장 중요하게 고려한다."]},
+{q:"비병리적(non-pathological) 접근 치료프로그램(미술·음악·놀이 치료 등)의 한계로 논문에서 언급된 것은?",o:["정서적 특성을 지나치게 강조해 인지 발달이 저해된다.","규칙과 피드백의 일관성이 낮고, 체계적‧효율적인 진행이 어렵다.","약물 부작용이 커서 장기 사용이 불가능하다.","상담사 개입이 거의 없어 대인 관계 개선에 효과가 없다."]},
+{q:"이 연구에서 작업기억(working memory)에 주목한 이유로 가장 적절한 것은?",o:["운동기능과 소근육 발달을 직접적으로 향상시키기 때문이다.","ADHD의 인지행동을 관장하는 전두엽 기능과 깊게 연관되어 있기 때문이다.","약물 치료와의 병행이 불가능하기 때문이다.","장기 기억 능력을 직접 측정하는 지표이기 때문이다."]},
+{q:"기존 컴퓨터 기반 작업기억훈련 프로그램(코그메드 등)에 대한 분석에서 드러난 한계에 대한 설명으로 옳지 않은 것은?",o:["공감 형성을 위한 의미적 요소(스토리·상징)가 부족하다.","다양한 감각을 동시에 활용하는 설계가 부족하다.","인과성과 연결성을 고려한 이야기 구조가 부족하다.","상담사의 개입이 너무 강해 아동의 능동성이 과도하게 높다."]},
+{q:"논문에서 정리한 '인터랙션 설계 시 고려해야 할 주요 요소'의 구성이 올바르게 짝지어진 것은?",o:["의미적 요소 – 직관성·공감성·명료성 / 물리적 요소 – 직접성·동시성","의미적 요소 – 독립성·능동성 / 물리적 요소 – 인과성·연결성","의미적 요소 – 시각·청각 / 물리적 요소 – 이미지·텍스트","의미적 요소 – 인과성·일관성 / 물리적 요소 – 독립성·변주성"]},
+{q:"본 연구에서 TRPG(Table Role-Playing Game) 형식을 채택한 이유로 가장 적절한 것은?",o:["디지털 기기를 사용하지 않고 아날로그 카드만으로 진행하기 위해","상징적 캐릭터와 사건 중심의 스토리 구성, 다양한 물리 인터페이스, 열린 이야기 구조를 통해 공감·몰입과 변주를 동시에 지원하기 위해","규칙이 단순해 인지적 자극을 최소화하기 위해","상담사가 일방적으로 스토리를 읽어주는 구조를 만들기 위해"]},
+{q:"제안된 치료 도구의 인터랙션과 진행 방식에 대한 설명으로 옳은 것은?",o:["정답을 맞히면 상담사가 직접 점수를 기록해 주고, 도구는 피드백을 제공하지 않는다.","음성 입력만으로 진행되며, 시각 정보는 제공되지 않는다.","4개의 회전 유닛(동물, 먹이, 시간, 숫자)을 조작하여 카드를 통해 제시된 힌트와 일치시키면 LED와 소리로 즉각적인 피드백이 제공된다.","터치스크린 기반 게임으로, 물리적 조작 없이 모두 화면에서 이루어진다."]},
+{q:"전문가 평가(아동심리·재활심리 전문가)의 종합적 의견에 대한 설명으로 가장 적절한 것은?",o:["임상에서 활용하기 어려우며, 기존 도구보다 효용성이 낮다고 평가되었다.","TRPG 기반 방식은 비효율적이어서 다른 방식으로 대체되어야 한다고 평가되었다.","일반 범주의 질환 아동에게 실효성이 있을 수 있으며, 보드게임의 대체재로서 가능성이 있다는 긍정적인 평가와 함께 대상‧환경‧상징물 다양성 측면의 보완 필요성이 제기되었다.","오직 개별 놀이치료에서만 활용 가능하고, 어떤 확장성도 없다고 평가되었다."]}
+];
+const answers = [2,1,1,1,1,3,0,1,2,2];
+
+const quiz=document.getElementById("quiz");
+questions.forEach((q,i)=>{
+ let d=document.createElement("div");d.className="question";
+ d.innerHTML=`<p>${i+1}. ${q.q}</p>`;
+ q.o.forEach((t,j)=>{
+  d.innerHTML+=`<label><input type="radio" name="q${i}" value="${j}">${t}</label>`;
+ });
+ quiz.appendChild(d);
+});
+
+const paperId = 'K3';
+
+async function submitQuiz(){
+ const userName = document.getElementById("userName").value.trim();
+ if(!userName){
+  alert("이름을 입력해주세요.");
+  return;
+ }
+ 
+ const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+ let s=0;
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  document.querySelectorAll(`input[name=q${i}]`).forEach(inp=>{
+    let l=inp.parentElement;
+    l.classList.remove("correct","wrong","neutral");
+    if(inp.value==answers[i])l.classList.add("correct");
+    else if(sel&&inp===sel)l.classList.add("wrong");
+    else l.classList.add("neutral");
+  });
+  if(sel&&sel.value==answers[i])s++;
+ });
+ 
+ const totalQuestions = questions.length;
+ const accuracy = (s / totalQuestions * 100).toFixed(1);
+ document.getElementById("score").innerText=`점수: ${s} / ${totalQuestions} (정답률: ${accuracy}%)`;
+ 
+ // 오답 문제 번호 수집 (1부터 시작)
+ const wrongAnswers = [];
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  if(!sel || sel.value != answers[i]){
+   wrongAnswers.push(i + 1); // 문제 번호는 1부터 시작
+  }
+ });
+ 
+ // JSON 데이터 생성
+ const resultData = {
+  name: userName,
+  paper: paperId,
+  mode: selectedMode,
+  score: s,
+  wrong_answers: wrongAnswers,
+  timestamp: new Date().toISOString()
+ };
+ 
+ // 서버에 저장
+ try {
+  const response = await fetch('http://localhost:4000/api/save-result', {
+   method: 'POST',
+   headers: {
+    'Content-Type': 'application/json'
+   },
+   body: JSON.stringify(resultData)
+  });
+  
+  if(!response.ok){
+   throw new Error('저장 실패');
+  }
+  
+  console.log('결과가 저장되었습니다.');
+ } catch(error){
+  console.error('저장 오류:', error);
+  // 오프라인일 경우 로컬 스토리지에 저장
+  localStorage.setItem(`result_${userName}_${paperId}_${Date.now()}`, JSON.stringify(resultData));
+  alert('서버 연결 실패. 로컬에 저장되었습니다.');
+ }
+}
+</script>
+</body>
+</html>

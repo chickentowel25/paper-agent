@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>K5 연구 이해도 평가</title>
+<style>
+body{font-family:Arial;max-width:900px;margin:40px auto;padding:20px}
+.user-info{margin-bottom:30px;padding:20px;background:#f5f5f5;border-radius:8px}
+.user-info label{display:block;margin-bottom:10px;font-weight:600}
+.user-info input[type="text"]{width:100%;padding:10px;font-size:16px;border:2px solid #ddd;border-radius:4px;margin-bottom:20px}
+.mode-selection{margin-bottom:20px}
+.mode-selection label{display:inline-block;margin-right:20px;cursor:pointer;padding:8px 16px;background:#fff;border:2px solid #ddd;border-radius:4px}
+.mode-selection input[type="radio"]{margin-right:8px}
+.mode-selection input[type="radio"]:checked + span{font-weight:600}
+.question{margin-bottom:25px}
+label{display:block;padding:6px;border-radius:6px;cursor:pointer}
+.correct{background:#d4f7d4}
+.wrong{background:#f8d0d0}
+.neutral{background:#eee}
+button{padding:12px 24px;font-size:16px;cursor:pointer;background:#000;color:#fff;border:none;border-radius:4px}
+button:hover{background:#333}
+#score{margin-top:20px;font-size:20px;font-weight:600;padding:15px;background:#f0f0f0;border-radius:4px}
+</style>
+</head>
+<body>
+
+<h1>K5 <em>금융 피싱 맥락에서의 UX 개입 행동 유도성과 수용성의 균형에 대한 실험적 분석</em> 이해도 평가</h1>
+
+<div class="user-info">
+    <label for="userName">이름:</label>
+    <input type="text" id="userName" placeholder="이름을 입력하세요" required>
+    
+    <div class="mode-selection">
+        <label><input type="radio" name="mode" value="direct" checked><span>직접 읽기</span></label>
+        <label><input type="radio" name="mode" value="text"><span>텍스트 챗봇</span></label>
+        <label><input type="radio" name="mode" value="voice"><span>음성 챗봇</span></label>
+    </div>
+</div>
+
+<form id="quiz"></form>
+<button onclick="submitQuiz()" type="button">제출</button>
+<div id="score"></div>
+
+<script>
+const questions = [
+{q:"이 연구의 가장 핵심적인 연구 목적을 가장 잘 나타내는 것은 무엇인가?",o:["금융 사기 유형을 분류하고 법적 처벌 기준을 제안하기 위해","고위험 이체 상황에서 다양한 UX 개입이 사용자의 행동 유도성과 수용성에 미치는 영향을 분석하여, 보안성과 사용자 경험 간 균형 잡힌 UX 설계 전략을 제안하기 위해","은행 보안 시스템의 기술적 취약점을 찾기 위해","10대 청소년의 금융 문해력을 향상시키기 위한 교육 앱을 개발하기 위해"]},
+{q:"이 연구의 실험 참여자 집단에 대한 설명으로 옳은 것은?",o:["40~50대 직장인 100명을 대상으로 했다.","70세 이상 고령층 49명을 대상으로 했다.","디지털 숙련도가 높은 20‧30대 사용자 49명을 대상으로 했다.","연령 제한 없이 무작위 온라인 사용자 200명을 대상으로 했다."]},
+{q:"이 연구에서 사용한 실험 설계 방식에 대한 설명으로 옳은 것은?",o:["한 참가자가 네 가지 UX 조건(A~D)을 모두 경험하는 within-subjects 설계였다.","네 가지 UX 개입 조건 중 하나에 무작위로 할당되는 시나리오 기반 between-subjects 설계였다.","사전·사후 면접만으로 정성적 비교를 수행하는 질적 연구였다.","현장 관찰을 통해 실제 앱 로그 데이터를 수집하는 현지조사(field study)였다."]},
+{q:"다음 중 네 가지 UX 개입 유형(A~D)에 대한 설명으로 옳게 짝지어진 것은?",o:["A: 시간 지연 / B: 감정 기반 팝업 / C: 무개입 / D: 경고 메시지","A: 무개입 / B: 경고 메시지 / C: 시간 지연 / D: 감정 기반 팝업","A: 경고 메시지 / B: 무개입 / C: 감정 기반 팝업 / D: 시간 지연","A: 감정 기반 팝업 / B: 시간 지연 / C: 경고 메시지 / D: 무개입"]},
+{q:"이 연구에서 '행동 유도성' 지표가 의미하는 바를 가장 잘 설명한 것은?",o:["UI의 미적 완성도를 평가하는 지표","사용자가 이체를 멈추거나 다시 생각하도록 만드는 억제 효과의 정도","앱 실행 속도와 시스템 성능을 평가하는 지표","사용자의 금융 지식을 측정하는 지표"]},
+{q:"UX 개입에 대한 '사용자 수용성' 지표에 포함된 평가 항목으로 옳은 것은?",o:["이체 성공 후 만족도, 계좌잔액 변화","앱 설치 빈도, 재사용 의도","표현 방식의 명확성, 불편함 유발 여부, 실제 서비스 적용 가능성","은행 브랜드 인지도, 광고 노출량"]},
+{q:"연구 가설(H1~H3)에 대한 설명으로 옳지 않은 것은?",o:["H1: UX 개입은 무개입 조건보다 행동 유도성이 높을 것이다.","H2: 행동 유도성이 높을수록 수용성도 함께 높아지는 경향이 있을 것이다.","H3: 감정 기반 팝업은 행동 유도성과 수용성을 모두 유의미하게 향상시킬 수 있다.","H1: UX 개입은 무개입 조건보다 사용자 수용성을 반드시 낮출 것이다."]},
+{q:"네 가지 UX 조건의 실험 결과에 대한 설명으로 가장 적절한 것은?",o:["무개입(A) 조건이 행동 유도성과 수용성 모두에서 가장 높은 평균값을 보였다.","감정 기반 팝업(D) 조건이 행동 유도성과 수용성 모두에서 가장 높은 평균값을 보였다.","시간 지연(C) 조건은 행동 유도성과 수용성 모두에서 가장 낮은 평균값을 보였다.","경고 메시지(B) 조건은 행동 유도성과 수용성 모두 무개입(A)보다 낮았다."]},
+{q:"행동 유도성과 수용성의 관계(H2) 분석 결과에 대한 설명으로 옳은 것은?",o:["개인 단위 데이터에서는 강한 정적 상관이 있었고, 조건별 평균에서는 상관이 없었다.","개인 단위 데이터와 조건별 평균 모두에서 상관관계가 나타나지 않았다.","개인 단위 데이터에서는 통계적으로 유의한 상관이 없었지만, 조건별 평균 수준에서는 강한 정적 상관이 나타났다.","두 지표는 항상 완전히 반비례하는 관계를 보였다."]},
+{q:"2×2 전략 매트릭스에서 각 UX 개입 유형이 배치된 위치에 대한 설명으로 옳은 것은?",o:["A(무개입)는 IDEAL, B(경고)는 INEFFECTIVE, C(시간 지연)는 SUPPORTIVE, D(감정 팝업)는 RISK-RESPONSIVE로 분류되었다.","A(무개입)는 INEFFECTIVE, B(경고)와 D(감정 팝업)는 IDEAL, C(시간 지연)는 RISK-RESPONSIVE로 분류되었다.","네 가지 조건 모두 IDEAL 영역에 분포하였다.","B(경고)와 C(시간 지연)는 SUPPORTIVE, D(감정 팝업)는 INEFFECTIVE로 분류되었다."]}
+];
+const answers = [1,2,1,1,1,2,3,1,2,1];
+
+const quiz=document.getElementById("quiz");
+questions.forEach((q,i)=>{
+ let d=document.createElement("div");d.className="question";
+ d.innerHTML=`<p>${i+1}. ${q.q}</p>`;
+ q.o.forEach((t,j)=>{
+  d.innerHTML+=`<label><input type="radio" name="q${i}" value="${j}">${t}</label>`;
+ });
+ quiz.appendChild(d);
+});
+
+const paperId = 'K5';
+
+async function submitQuiz(){
+ const userName = document.getElementById("userName").value.trim();
+ if(!userName){
+  alert("이름을 입력해주세요.");
+  return;
+ }
+ 
+ const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+ let s=0;
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  document.querySelectorAll(`input[name=q${i}]`).forEach(inp=>{
+    let l=inp.parentElement;
+    l.classList.remove("correct","wrong","neutral");
+    if(inp.value==answers[i])l.classList.add("correct");
+    else if(sel&&inp===sel)l.classList.add("wrong");
+    else l.classList.add("neutral");
+  });
+  if(sel&&sel.value==answers[i])s++;
+ });
+ 
+ const totalQuestions = questions.length;
+ const accuracy = (s / totalQuestions * 100).toFixed(1);
+ document.getElementById("score").innerText=`점수: ${s} / ${totalQuestions} (정답률: ${accuracy}%)`;
+ 
+ // 오답 문제 번호 수집 (1부터 시작)
+ const wrongAnswers = [];
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  if(!sel || sel.value != answers[i]){
+   wrongAnswers.push(i + 1); // 문제 번호는 1부터 시작
+  }
+ });
+ 
+ // JSON 데이터 생성
+ const resultData = {
+  name: userName,
+  paper: paperId,
+  mode: selectedMode,
+  score: s,
+  wrong_answers: wrongAnswers,
+  timestamp: new Date().toISOString()
+ };
+ 
+ // 서버에 저장
+ try {
+  const response = await fetch('http://localhost:4000/api/save-result', {
+   method: 'POST',
+   headers: {
+    'Content-Type': 'application/json'
+   },
+   body: JSON.stringify(resultData)
+  });
+  
+  if(!response.ok){
+   throw new Error('저장 실패');
+  }
+  
+  console.log('결과가 저장되었습니다.');
+ } catch(error){
+  console.error('저장 오류:', error);
+  // 오프라인일 경우 로컬 스토리지에 저장
+  localStorage.setItem(`result_${userName}_${paperId}_${Date.now()}`, JSON.stringify(resultData));
+  alert('서버 연결 실패. 로컬에 저장되었습니다.');
+ }
+}
+</script>
+</body>
+</html>

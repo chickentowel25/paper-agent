@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>K1 연구 이해도 평가</title>
+<style>
+body{font-family:Arial;max-width:900px;margin:40px auto;padding:20px}
+.user-info{margin-bottom:30px;padding:20px;background:#f5f5f5;border-radius:8px}
+.user-info label{display:block;margin-bottom:10px;font-weight:600}
+.user-info input[type="text"]{width:100%;padding:10px;font-size:16px;border:2px solid #ddd;border-radius:4px;margin-bottom:20px}
+.mode-selection{margin-bottom:20px}
+.mode-selection label{display:inline-block;margin-right:20px;cursor:pointer;padding:8px 16px;background:#fff;border:2px solid #ddd;border-radius:4px}
+.mode-selection input[type="radio"]{margin-right:8px}
+.mode-selection input[type="radio"]:checked + span{font-weight:600}
+.question{margin-bottom:25px}
+label{display:block;padding:6px;border-radius:6px;cursor:pointer}
+.correct{background:#d4f7d4}
+.wrong{background:#f8d0d0}
+.neutral{background:#eee}
+button{padding:12px 24px;font-size:16px;cursor:pointer;background:#000;color:#fff;border:none;border-radius:4px}
+button:hover{background:#333}
+#score{margin-top:20px;font-size:20px;font-weight:600;padding:15px;background:#f0f0f0;border-radius:4px}
+</style>
+</head>
+<body>
+
+<h1>K1 <em>멀티모달 생성형 AI의 메타인지 연구 디자인 학습자를 중심으로</em> 이해도 평가</h1>
+
+<div class="user-info">
+    <label for="userName">이름:</label>
+    <input type="text" id="userName" placeholder="이름을 입력하세요" required>
+    
+    <div class="mode-selection">
+        <label><input type="radio" name="mode" value="direct" checked><span>직접 읽기</span></label>
+        <label><input type="radio" name="mode" value="text"><span>텍스트 챗봇</span></label>
+        <label><input type="radio" name="mode" value="voice"><span>음성 챗봇</span></label>
+    </div>
+</div>
+
+<form id="quiz"></form>
+<button onclick="submitQuiz()" type="button">제출</button>
+<div id="score"></div>
+
+<script>
+const questions=[
+{q:"이 논문의 연구 대상은 누구인가?",o:["국내 고등학교 정보과 학생","국내 대학 디자인학과 학습자","현업 UX/UI 디자이너","일반 성인 ChatGPT 사용자"]},
+{q:"이 연구에서 디자인 프로젝트를 진행한 수업 맥락으로 옳은 것은?",o:["2주간의 단기 디자인 해커톤","8주 온라인 비정규 특강","15주간의 UX/UI 디자인 정규 수업","1년간 진행된 졸업 연구 스튜디오"]},
+{q:"이 연구에서 적용한 디자인 사고 프레임워크는 무엇인가?",o:["디자인 스프린트(Design Sprint)","더블 다이아몬드(Double Diamond) 모델","워터폴(Waterfall) 모델","린 스타트업(Lean Startup) 모델"]},
+{q:"더블 다이아몬드 프로세스의 네 단계 구성으로 옳은 것은?",o:["Discover–Ideate–Prototype–Test","Observe–Reflect–Make–Share","Discover–Define–Develop–Deliver","Empathize–Define–Ideate–Prototype"]},
+{q:"연구에서 '메타인지'를 측정하기 위해 활용한 도구로 가장 알맞은 것은?",o:["STAI(상태-특성 불안 검사)","MAI(메타인지 인식 검사)를 디자인 교육 맥락에 맞게 수정한 척도","Big Five 성격 유형 검사","NASA-TLX 작업부하 설문"]},
+{q:"이 연구에서 메타인지가 가장 높게 나타난 AI 유형은 무엇인가?",o:["텍스트 → 텍스트 단일모달 AI","텍스트 → 이미지 멀티모달 AI","이미지 → 영상 멀티모달 AI","텍스트 → 음성 멀티모달 AI"]},
+{q:"멀티모달 생성형 AI 중에서 학습자 선호도가 가장 높았던 유형은?",o:["텍스트 → 텍스트","텍스트 → 이미지","이미지 → 텍스트","텍스트 → 영상"]},
+{q:"연구 결과에 대한 설명 중 옳은 것은?",o:["비판적 사고 능력은 거의 변하지 않았다.","AI 한계 인식률은 실험이 진행될수록 감소하였다.","비판적 사고 능력은 60% 이상 향상되었다.","미래 AI 사용 의향은 전 단계에서 매우 낮게 나타났다."]},
+{q:"이 연구에서 보고한 AI 한계 인식률 변화에 대한 설명으로 가장 적절한 것은?",o:["1단계 50%에서 4단계 60%로 소폭 증가했다.","1단계 12.9%에서 4단계 87.1%로 크게 증가했다.","모든 단계에서 약 30% 수준으로 유지되었다.","단계가 진행될수록 불규칙하게 감소와 증가를 반복했다."]},
+{q:"이 연구의 참여 학생 수에 대한 설명으로 옳은 것은?",o:["30명 미만의 소규모 표본이었다.","40명의 1학년만을 대상으로 했다.","62명의 2–4학년 디자인 관련 전공 학생들이 참여했다.","100명 이상의 다학제 전공 학생들이 참여했다."]}
+];
+const answers=[1,2,1,2,1,0,1,2,1,2];
+
+const quiz=document.getElementById("quiz");
+questions.forEach((q,i)=>{
+ let d=document.createElement("div");d.className="question";
+ d.innerHTML=`<p>${i+1}. ${q.q}</p>`;
+ q.o.forEach((t,j)=>{
+  d.innerHTML+=`<label><input type="radio" name="q${i}" value="${j}">${t}</label>`;
+ });
+ quiz.appendChild(d);
+});
+
+const paperId = 'K1';
+
+async function submitQuiz(){
+ const userName = document.getElementById("userName").value.trim();
+ if(!userName){
+  alert("이름을 입력해주세요.");
+  return;
+ }
+ 
+ const selectedMode = document.querySelector('input[name="mode"]:checked').value;
+ let s=0;
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  document.querySelectorAll(`input[name=q${i}]`).forEach(inp=>{
+    let l=inp.parentElement;
+    l.classList.remove("correct","wrong","neutral");
+    if(inp.value==answers[i])l.classList.add("correct");
+    else if(sel&&inp===sel)l.classList.add("wrong");
+    else l.classList.add("neutral");
+  });
+  if(sel&&sel.value==answers[i])s++;
+ });
+ 
+ const totalQuestions = questions.length;
+ const accuracy = (s / totalQuestions * 100).toFixed(1);
+ document.getElementById("score").innerText=`점수: ${s} / ${totalQuestions} (정답률: ${accuracy}%)`;
+ 
+ // 오답 문제 번호 수집 (1부터 시작)
+ const wrongAnswers = [];
+ questions.forEach((_,i)=>{
+  const sel=document.querySelector(`input[name=q${i}]:checked`);
+  if(!sel || sel.value != answers[i]){
+   wrongAnswers.push(i + 1); // 문제 번호는 1부터 시작
+  }
+ });
+ 
+ // JSON 데이터 생성
+ const resultData = {
+  name: userName,
+  paper: paperId,
+  mode: selectedMode,
+  score: s,
+  wrong_answers: wrongAnswers,
+  timestamp: new Date().toISOString()
+ };
+ 
+ // 서버에 저장
+ try {
+  const response = await fetch('http://localhost:4000/api/save-result', {
+   method: 'POST',
+   headers: {
+    'Content-Type': 'application/json'
+   },
+   body: JSON.stringify(resultData)
+  });
+  
+  if(!response.ok){
+   throw new Error('저장 실패');
+  }
+  
+  console.log('결과가 저장되었습니다.');
+ } catch(error){
+  console.error('저장 오류:', error);
+  // 오프라인일 경우 로컬 스토리지에 저장
+  localStorage.setItem(`result_${userName}_${paperId}_${Date.now()}`, JSON.stringify(resultData));
+  alert('서버 연결 실패. 로컬에 저장되었습니다.');
+ }
+}
+</script>
+</body>
+</html>

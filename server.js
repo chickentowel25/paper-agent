@@ -267,7 +267,7 @@ app.post('/api/stt/recognize', async (req, res) => {
     }
 });
 
-// 음성 모드: STT로 변환된 텍스트를 받아서 응답
+// 음성 모드: STT로 변환된 텍스트를 받아서 응답 (스트리밍)
 app.post('/api/conversation/talk', async (req, res) => {
     try {
         const { sessionId, transcript } = req.body;
@@ -297,24 +297,100 @@ app.post('/api/conversation/talk', async (req, res) => {
         // Web Speech API로 변환된 텍스트 사용
         const userMessage = transcript.trim();
 
-        // PaperAgent를 사용하여 응답 생성 (음성 모드는 200자 이내)
+        // SSE 헤더 설정
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no'); // nginx 버퍼링 방지
+
+        // PaperAgent를 사용하여 스트리밍 응답 생성 (음성 모드는 200자 이내)
         // 한국어 기준으로 약 200자 = 약 100토큰 정도이지만, 안전하게 150토큰으로 설정
-        const response = await session.paperAgent.ask(userMessage, {
-            maxOutputTokens: 150
+        const stream = await session.paperAgent.ask(userMessage, {
+            maxOutputTokens: 150,
+            stream: true
         });
 
-        // TTS: 응답을 오디오로 변환
-        const audioBase64 = await tts.synthesizeSpeechToBase64(response);
+        let fullResponse = '';
+        let responseId = null;
 
-        res.json({
-            success: true,
-            userMessage,
-            response,
-            audioBase64
-        });
+        try {
+            let chunkCount = 0;
+            for await (const chunk of stream) {
+                chunkCount++;
+
+                // 응답 ID 저장 (첫 번째 청크에서)
+                if (!responseId && chunk.id) {
+                    responseId = chunk.id;
+                    session.paperAgent.lastResponseId = chunk.id;
+                }
+
+                // 텍스트 추출 - Responses API 스트리밍 형식
+                let text = '';
+                
+                // Responses API 스트리밍: type이 "response.output_text.delta"이고 delta가 문자열인 경우
+                if (chunk.type === 'response.output_text.delta' && typeof chunk.delta === 'string') {
+                    text = chunk.delta;
+                }
+                // 1. output_text가 직접 있는 경우
+                else if (chunk.output_text) {
+                    text = chunk.output_text;
+                }
+                // 2. delta에 output_text가 있는 경우
+                else if (chunk.delta && chunk.delta.output_text) {
+                    text = chunk.delta.output_text;
+                }
+                // 3. output 배열에서 추출
+                else if (chunk.output && Array.isArray(chunk.output)) {
+                    for (const item of chunk.output) {
+                        if (item.type === 'message' && Array.isArray(item.content)) {
+                            for (const content of item.content) {
+                                if (content.type === 'output_text' && content.text) {
+                                    text += content.text;
+                                }
+                            }
+                        }
+                    }
+                }
+                // 4. delta.output에서 추출
+                else if (chunk.delta && chunk.delta.output && Array.isArray(chunk.delta.output)) {
+                    for (const item of chunk.delta.output) {
+                        if (item.type === 'message' && Array.isArray(item.content)) {
+                            for (const content of item.content) {
+                                if (content.type === 'output_text' && content.text) {
+                                    text += content.text;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (text) {
+                    fullResponse += text;
+                    // SSE 형식으로 실시간 텍스트 전송
+                    res.write(`data: ${JSON.stringify({ type: 'chunk', text: text })}\n\n`);
+                }
+            }
+
+            // 완료 신호 전송 (클라이언트에서 Web Speech API 사용하므로 서버 TTS는 생략)
+            res.write(`data: ${JSON.stringify({ 
+                type: 'done', 
+                responseId: responseId,
+                response: fullResponse
+            })}\n\n`);
+            res.end();
+        } catch (streamError) {
+            console.error('스트리밍 오류:', streamError);
+            res.write(`data: ${JSON.stringify({ type: 'error', error: streamError.message })}\n\n`);
+            res.end();
+        }
     } catch (error) {
         console.error('음성 대화 오류:', error);
-        res.status(500).json({ success: false, error: error.message });
+        if (!res.headersSent) {
+            res.status(500).json({ success: false, error: error.message });
+        } else {
+            res.write(`data: ${JSON.stringify({ type: 'error', error: error.message })}\n\n`);
+            res.end();
+        }
     }
 });
 
